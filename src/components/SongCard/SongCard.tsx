@@ -1,13 +1,16 @@
 import {
-  Box,
   Card,
   CardActionArea,
   CardContent,
   CardMedia,
   Chip,
+  Grid,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import { DownloadState } from "../../types/songs";
+import { getDownloadStateIcon } from "../../utils/icons";
+import { getDifficultyColor, getDownloadStateLabel } from "../../utils/songs";
 
 export interface SongCardProps {
   title: string;
@@ -28,22 +31,6 @@ const SongCard = ({
   onDownload,
   onPlay,
 }: SongCardProps) => {
-  const getDifficultyColor = (difficulty: string) => {
-    const lowerDiff = difficulty.toLowerCase();
-    switch (lowerDiff) {
-      case "easy":
-        return "success";
-      case "medium":
-        return "secondary";
-      case "hard":
-        return "warning";
-      case "expert":
-        return "error";
-      default:
-        return "default";
-    }
-  };
-
   const handleCardClick = () => {
     if (downloadState === "downloaded") {
       onPlay();
@@ -94,18 +81,31 @@ const SongCard = ({
           >
             {artist}
           </Typography>
-          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-            {difficulties.map((difficulty, index) => (
-              <Chip
-                key={index}
-                label={difficulty}
-                size="small"
-                variant="outlined"
-                color={getDifficultyColor(difficulty)}
-                sx={{ fontSize: "0.75rem" }}
-              />
-            ))}
-          </Box>
+          <Grid container>
+            <Grid
+              size="auto"
+              sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}
+            >
+              {difficulties.map((difficulty, index) => (
+                <Chip
+                  key={index}
+                  label={difficulty}
+                  size="small"
+                  variant="outlined"
+                  color={getDifficultyColor(difficulty)}
+                  sx={{ fontSize: "0.75rem" }}
+                />
+              ))}
+            </Grid>
+            <Grid size="grow" textAlign="right">
+              <Tooltip
+                placement="top"
+                title={getDownloadStateLabel(downloadState)}
+              >
+                {getDownloadStateIcon(downloadState)}
+              </Tooltip>
+            </Grid>
+          </Grid>
         </CardContent>
       </CardActionArea>
     </Card>
