@@ -1,16 +1,8 @@
-import {
-  AccountCircle,
-  Dashboard as DashboardIcon,
-  Info as InfoIcon,
-  Menu as MenuIcon,
-  MusicNote as MusicNoteIcon,
-  Settings as SettingsIcon,
-} from "@mui/icons-material";
+import { AccountCircle, Menu as MenuIcon } from "@mui/icons-material";
 import {
   AppBar,
   Avatar,
   Box,
-  CssBaseline,
   Divider,
   Drawer,
   IconButton,
@@ -27,29 +19,24 @@ import {
   useTheme,
 } from "@mui/material";
 import React, { useState } from "react";
-import { Outlet } from "react-router";
+import { Outlet, To, useNavigate } from "react-router";
+import { routes } from "../../utils/routes";
 
 const drawerWidth = 280;
-
-// TODO: Replace with actual navigation items
-const navigationItems = [
-  { text: "Dashboard", icon: DashboardIcon, path: "/" },
-  { text: "Songs", icon: MusicNoteIcon, path: "/songs" },
-  { text: "Settings", icon: SettingsIcon, path: "/settings" },
-  { text: "About", icon: InfoIcon, path: "/about" },
-];
 
 const Layout = () => {
   const theme = useTheme();
 
+  const navigate = useNavigate();
+
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const handleDrawerClose = () => {
     setIsClosing(true);
-    setMobileOpen(false);
+    setIsDrawerOpen(false);
   };
 
   const handleDrawerTransitionEnd = () => {
@@ -58,7 +45,7 @@ const Layout = () => {
 
   const handleDrawerToggle = () => {
     if (!isClosing) {
-      setMobileOpen(!mobileOpen);
+      setIsDrawerOpen(!isDrawerOpen);
     }
   };
 
@@ -70,12 +57,19 @@ const Layout = () => {
     setAnchorEl(null);
   };
 
+  const handleNavigation = (path: To | number) => {
+    setIsDrawerOpen(false);
+    if (typeof path === "number") {
+      navigate(path);
+    } else {
+      navigate(path);
+    }
+  };
+
   const isMenuOpen = Boolean(anchorEl);
 
   return (
     <Box sx={{ display: "flex" }}>
-      <CssBaseline />
-
       {/* App Bar */}
       <AppBar
         elevation={0}
@@ -144,7 +138,7 @@ const Layout = () => {
         {/* Mobile drawer */}
         <Drawer
           variant={isMobile ? "temporary" : "permanent"}
-          open={isMobile ? mobileOpen : true}
+          open={isMobile ? isDrawerOpen : true}
           onTransitionEnd={handleDrawerTransitionEnd}
           onClose={handleDrawerClose}
           elevation={0}
@@ -173,52 +167,32 @@ const Layout = () => {
           </Toolbar>
           <Divider />
           <List>
-            {navigationItems.map((item) => (
-              <ListItem key={item.text} disablePadding>
-                <ListItemButton
-                  sx={{
-                    minHeight: 48,
-                    justifyContent: "initial",
-                    px: 2.5,
-                  }}
-                >
-                  <ListItemIcon
-                    color="primary"
+            {routes
+              .filter((route) => !route.hideInDrawer)
+              .map(({ label, Icon, path, name }) => (
+                <ListItem key={name} disablePadding>
+                  <ListItemButton
                     sx={{
-                      minWidth: 0,
-                      mr: 3,
-                      justifyContent: "center",
+                      minHeight: 48,
+                      justifyContent: "initial",
+                      px: 2.5,
                     }}
+                    onClick={() => handleNavigation(path)}
                   >
-                    <item.icon color="primary" />
-                  </ListItemIcon>
-                  <ListItemText primary={item.text} />
-                </ListItemButton>
-              </ListItem>
-            ))}
-          </List>
-          <Divider />
-          <List>
-            <ListItem disablePadding>
-              <ListItemButton
-                sx={{
-                  minHeight: 48,
-                  justifyContent: "initial",
-                  px: 2.5,
-                }}
-              >
-                <ListItemIcon
-                  sx={{
-                    minWidth: 0,
-                    mr: 3,
-                    justifyContent: "center",
-                  }}
-                >
-                  <SettingsIcon color="primary" />
-                </ListItemIcon>
-                <ListItemText primary="Preferences" />
-              </ListItemButton>
-            </ListItem>
+                    <ListItemIcon
+                      color="primary"
+                      sx={{
+                        minWidth: 0,
+                        mr: 3,
+                        justifyContent: "center",
+                      }}
+                    >
+                      {Icon && <Icon color="primary" />}
+                    </ListItemIcon>
+                    <ListItemText primary={label} />
+                  </ListItemButton>
+                </ListItem>
+              ))}
           </List>
         </Drawer>
       </Box>

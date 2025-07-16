@@ -2,22 +2,20 @@ import { createBrowserRouter, RouterProvider } from "react-router";
 
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import App from "./App.tsx";
 import "./styles.css";
 import Layout from "./pages/Layout/Layout.tsx";
 import { ThemeProvider } from "@emotion/react";
 import { createTheme, CssBaseline } from "@mui/material";
+import { routes } from "./utils/routes.ts";
 
 const router = createBrowserRouter([
   {
     path: "/",
     element: <Layout />,
-    children: [
-      {
-        path: "/",
-        element: <App />,
-      },
-    ],
+    children: routes.map(({ PageComponent, path }) => ({
+      path: path,
+      element: <PageComponent />,
+    })),
   },
 ]);
 
@@ -28,11 +26,14 @@ const theme = createTheme({
       main: "#b95bff",
     },
     background: {
-      default: "#1e1e1e",
+      default: "#101010",
       paper: "#1e1e1e",
     },
+    divider: "#111",
   },
 });
+
+console.log("Theme created:", theme);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
