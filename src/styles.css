@@ -1,0 +1,28 @@
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #111;
+  color: white;
+  font-family: sans-serif;
+  overflow: visible !important;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+a {
+  color: #7219bf;
+  text-decoration: none;
+}
+
+canvas {
+  margin: auto;
+}

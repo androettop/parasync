@@ -1,50 +1,110 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
-import "./App.css";
+import { useState, useEffect } from "react";
+import styles from "./App.module.css";
+import { SongBrowser } from "./components/SongBrowser/SongBrowser";
+import { APIConfig } from "./components/APIConfig/APIConfig";
+import { SongData } from "./types/songs";
+import { loadSongFromZip } from "./game/helpers/zipSongLoader";
+import { getAPIConfig, validateAPIUrl } from "./game/helpers/apiService";
+import GameLoader from "./components/GameLoader/GameLoader";
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+  const [selectedSong, setSelectedSong] = useState<SongData | null>(null);
+  const [showAPIConfig, setShowAPIConfig] = useState<boolean>(false);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
-  }
+  // Check API configuration on app load
+  useEffect(() => {
+    const checkAPIConfig = async () => {
+      const config = getAPIConfig();
+      const isValid = await validateAPIUrl(config.baseUrl);
+      if (!isValid) {
+        setShowAPIConfig(true);
+      }
+    };
+    
+    checkAPIConfig();
+  }, []);
+
+  const handleSongSelect = async (zipBlob: Blob, difficultyFileName: string, songTitle: string) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const songData = await loadSongFromZip(zipBlob, difficultyFileName, songTitle);
+      if (songData) {
+        setSelectedSong(songData);
+      } else {
+        setError("Failed to load song data");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load song");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfigSaved = () => {
+    setShowAPIConfig(false);
+  };
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+      setIsFullscreen(true);
+    } else if (document.exitFullscreen) {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  };
+
+  const handleExit = () => {
+    setSelectedSong(null);
+    setError(null);
+  };
+
+  const handleOpenAPIConfig = () => {
+    setShowAPIConfig(true);
+  };
 
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
+    <>
+      {selectedSong ? (
+        <GameLoader song={selectedSong} onExit={handleExit} />
+      ) : showAPIConfig ? (
+        <APIConfig onConfigSaved={handleConfigSaved} />
+      ) : (
+        <div className={styles.container}>
+          <div className={styles.header}>
+            <button 
+              onClick={handleOpenAPIConfig}
+              className={styles.configButton}
+            >
+              ⚙️ API Settings
+            </button>
+          </div>
 
-      <div className="row">
-        <a href="https://vitejs.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://reactjs.org" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
+          {loading && (
+            <div className={styles.loadingMessage}>
+              Loading song...
+            </div>
+          )}
 
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
-    </main>
+          {error && (
+            <div className={styles.errorMessage}>
+              {error}
+            </div>
+          )}
+
+          <SongBrowser onSongSelect={handleSongSelect} />
+        </div>
+      )}
+
+      <button onClick={toggleFullscreen} className={styles.fullscreenButton}>
+        {isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+      </button>
+    </>
   );
 }
 
