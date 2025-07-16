@@ -9,7 +9,7 @@ const HomePage = () => {
       </Typography>
       <SongCard
         artist="Queen"
-        title="Bohemian Rhapsody"
+        title="Bohemian Rhapsody long long looong text"
         coverImage="https://m.media-amazon.com/images/I/61dk4SHy1CL.jpg"
         difficulties={["Easy", "Medium", "Hard", "Expert"]}
         downloadState="not-downloaded"

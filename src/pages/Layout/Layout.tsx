@@ -154,8 +154,8 @@ const Layout = () => {
             elevation={0}
             ModalProps={{
               keepMounted: true, // Better open performance on mobile.
+              disableScrollLock: true,
             }}
-            disableScrollLock
             sx={{
               "& .MuiDrawer-paper": {
                 boxSizing: "border-box",

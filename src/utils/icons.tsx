@@ -8,7 +8,7 @@ export const getDownloadStateIcon = (downloadState: DownloadState) => {
     case "not-downloaded":
       return <DownloadIcon />;
     case "downloading":
-      return <CircularProgress size={20} />;
+      return <CircularProgress color="inherit" size={20} />;
     case "downloaded":
     default:
       return <DownloadDoneIcon color="success" />;

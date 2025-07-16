@@ -25,21 +25,14 @@ const theme = createTheme({
     primary: {
       main: "#b95bff",
     },
+    secondary: {
+      main: colors.yellow[400],
+    },
     background: {
       default: "#101010",
       paper: "#1e1e1e",
     },
     divider: "#111",
-  },
-  components: {
-    MuiChip: {
-      styleOverrides: {
-        colorSecondary: {
-          color: colors.yellow[400],
-          borderColor: colors.yellow[400],
-        },
-      },
-    },
   },
 });
 

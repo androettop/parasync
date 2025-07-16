@@ -12,7 +12,7 @@ export const getDifficultyColor = (difficulty: string) => {
     case "expert":
       return "error";
     default:
-      return "default";
+      return "info";
   }
 };
 
