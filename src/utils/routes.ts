@@ -1,19 +1,21 @@
-import { Fragment } from "react/jsx-runtime";
-import { Route } from "../types/routes";
 import {
-  AccountCircle,
   Dashboard as DashboardIcon,
   Info as InfoIcon,
-  Menu as MenuIcon,
   MusicNote as MusicNoteIcon,
   Settings as SettingsIcon,
 } from "@mui/icons-material";
+import AboutPage from "../pages/AboutPage/AboutPage";
+import HomePage from "../pages/HomePage/HomePage";
+import NotFoundPage from "../pages/NotFoundPage/NotFoundPage";
+import SettingsPage from "../pages/SettingsPage/SettingsPage";
+import SongsPage from "../pages/SongsPage/SongsPage";
+import { Route } from "../types/routes";
 
 export const notFoundRoute: Route = {
-  label: "Página no encontrada",
+  label: "Not Found",
   name: "not-found",
   path: "*",
-  PageComponent: Fragment,
+  PageComponent: NotFoundPage,
   hideInDrawer: true,
 };
 
@@ -22,28 +24,28 @@ export const routes: Route[] = [
     label: "Home",
     name: "home",
     path: "/",
-    PageComponent: Fragment,
+    PageComponent: HomePage,
     Icon: DashboardIcon,
   },
   {
     label: "Songs",
     name: "songs",
     path: "/songs",
-    PageComponent: Fragment,
+    PageComponent: SongsPage,
     Icon: MusicNoteIcon,
   },
   {
     label: "Settings",
     name: "settings",
     path: "/settings",
-    PageComponent: Fragment,
+    PageComponent: SettingsPage,
     Icon: SettingsIcon,
   },
   {
     label: "About",
     name: "about",
     path: "/about",
-    PageComponent: Fragment,
+    PageComponent: AboutPage,
     Icon: InfoIcon,
   },
 
