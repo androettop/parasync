@@ -5,7 +5,7 @@ import { createRoot } from "react-dom/client";
 import "./styles.css";
 import Layout from "./pages/Layout/Layout.tsx";
 import { ThemeProvider } from "@emotion/react";
-import { createTheme, CssBaseline } from "@mui/material";
+import { colors, createTheme, CssBaseline } from "@mui/material";
 import { routes } from "./utils/routes.ts";
 
 const router = createBrowserRouter([
@@ -30,6 +30,16 @@ const theme = createTheme({
       paper: "#1e1e1e",
     },
     divider: "#111",
+  },
+  components: {
+    MuiChip: {
+      styleOverrides: {
+        colorSecondary: {
+          color: colors.yellow[400],
+          borderColor: colors.yellow[400],
+        },
+      },
+    },
   },
 });
 
