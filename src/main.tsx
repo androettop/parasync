@@ -33,8 +33,6 @@ const theme = createTheme({
   },
 });
 
-console.log("Theme created:", theme);
-
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <CssBaseline />
