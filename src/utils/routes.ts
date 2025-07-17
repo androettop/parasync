@@ -9,9 +9,11 @@ import HomePage from "../pages/HomePage/HomePage";
 import NotFoundPage from "../pages/NotFoundPage/NotFoundPage";
 import SettingsPage from "../pages/SettingsPage/SettingsPage";
 import DownloadIcon from "@mui/icons-material/Download";
+import DebugIcon from "@mui/icons-material/BugReport";
 import SongsPage from "../pages/SongsPage/SongsPage";
 import { Route } from "../types/routes";
 import DownloadsPage from "../pages/DownloadsPage/DownloadsPage";
+import App from "../App";
 
 export const notFoundRoute: Route = {
   label: "Not Found",
@@ -49,6 +51,13 @@ export const routes: Route[] = [
     path: "/settings",
     PageComponent: SettingsPage,
     Icon: SettingsIcon,
+  },
+  {
+    label: "Old ui",
+    name: "old-ui",
+    path: "/old-ui",
+    PageComponent: App,
+    Icon: DebugIcon,
   },
   {
     label: "About",
