@@ -3,6 +3,7 @@ import {
   AppBar,
   Avatar,
   Box,
+  Container,
   Divider,
   Drawer,
   IconButton,
@@ -221,7 +222,9 @@ const Layout = () => {
         }}
       >
         {showAppbar && <Toolbar />}
-        <Outlet />
+        <Container maxWidth="xl" sx={{ py: 2 }}>
+          <Outlet />
+        </Container>
       </Box>
 
       <Menu

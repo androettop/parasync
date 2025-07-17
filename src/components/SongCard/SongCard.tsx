@@ -4,7 +4,9 @@ import {
   CardActionArea,
   CardContent,
   CardMedia,
+  CircularProgress,
   Grid,
+  Skeleton,
   Tooltip,
   Typography,
   useTheme,
@@ -16,14 +18,18 @@ import { useRef, useState } from "react";
 import useMarquee from "../../hooks/useMarquee";
 
 export interface SongCardProps {
-  title: string;
-  artist: string;
-  coverImage: string;
-  difficulties: string[];
-  downloadState: DownloadState;
-  onDownload: () => void;
-  onPlay: () => void;
+  title?: string;
+  artist?: string;
+  coverImage?: string;
+  difficulties?: string[];
+  downloadState?: DownloadState;
+  downloads?: number;
+  onDownload?: () => void;
+  onPlay?: () => void;
+  isLoading?: boolean;
 }
+
+const HOVER_DELAY = 500; // milliseconds
 
 const SongCard = ({
   title,
@@ -31,28 +37,49 @@ const SongCard = ({
   coverImage,
   difficulties,
   downloadState,
+  downloads = 0,
   onDownload,
   onPlay,
+  isLoading,
 }: SongCardProps) => {
   const theme = useTheme();
   const titleRef = useRef<HTMLElement>(null);
   const [isHovering, setIsHovering] = useState(false);
+  const songCardTouchTimeout = useRef<number>(0);
   useMarquee(titleRef, isHovering);
 
   const handleCardClick = () => {
     if (downloadState === "downloaded") {
-      onPlay();
+      onPlay?.();
     } else if (downloadState === "not-downloaded") {
-      onDownload();
+      onDownload?.();
     }
   };
 
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleTouchStart = () => {
+    songCardTouchTimeout.current = setTimeout(() => {
+      setIsHovering(true);
+    }, HOVER_DELAY);
+  };
+
+  const handleTouchEnd = () => {
+    clearTimeout(songCardTouchTimeout.current);
+    setIsHovering(false);
+  };
   return (
     <Card
+      onContextMenu={handleContextMenu}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
       sx={{
-        width: 250,
         height: 250,
         position: "relative",
       }}
@@ -64,17 +91,23 @@ const SongCard = ({
           display: "flex",
           flexDirection: "column",
           alignItems: "stretch",
+          height: "100%",
         }}
       >
-        <CardMedia
-          component="img"
-          height="100%"
-          image={coverImage}
-          alt={`${title} cover`}
-          sx={{
-            objectFit: "cover",
-          }}
-        />
+        {!isLoading ? (
+          <CardMedia
+            component="img"
+            height="100%"
+            image={coverImage}
+            alt={`${title} cover`}
+            sx={{
+              objectFit: "cover",
+            }}
+          />
+        ) : (
+          <Skeleton variant="rectangular" width="100%" height="100%" />
+        )}
+
         <Box
           sx={{
             flexGrow: 1,
@@ -97,7 +130,7 @@ const SongCard = ({
               size="auto"
               sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}
             >
-              {difficulties.map((difficulty) => (
+              {difficulties?.map((difficulty) => (
                 <Tooltip title={difficulty} key={difficulty}>
                   <Box
                     sx={{
@@ -115,9 +148,17 @@ const SongCard = ({
             <Grid size="grow" textAlign="right">
               <Tooltip
                 placement="top"
-                title={getDownloadStateLabel(downloadState)}
+                title={
+                  !isLoading && downloadState
+                    ? getDownloadStateLabel(downloadState)
+                    : "Loading song details..."
+                }
               >
-                {getDownloadStateIcon(downloadState)}
+                {!isLoading && downloadState ? (
+                  getDownloadStateIcon(downloadState)
+                ) : (
+                  <CircularProgress color="inherit" size={20} />
+                )}
               </Tooltip>
             </Grid>
           </Grid>
@@ -129,16 +170,30 @@ const SongCard = ({
             ref={titleRef}
             sx={{ fontWeight: 600, margin: 0 }}
           >
-            {title}
+            {isLoading ? <Skeleton variant="text" width="80%" /> : title}
           </Typography>
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            noWrap
-            sx={{ mb: 0 }}
-          >
-            {artist}
-          </Typography>
+          <Box sx={{ display: "flex", gap: 2 }}>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              noWrap
+              sx={{ mb: 0 }}
+            >
+              {isLoading ? <Skeleton variant="text" width="60%" /> : artist}
+            </Typography>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              noWrap
+              sx={{ mb: 0, flex: 1, textAlign: "right" }}
+            >
+              {isLoading ? (
+                <Skeleton variant="text" width="60%" />
+              ) : (
+                `${downloads} downloads`
+              )}
+            </Typography>
+          </Box>
         </Box>
       </CardActionArea>
     </Card>
