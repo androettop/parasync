@@ -119,7 +119,7 @@ const SongCard = ({
             padding: 1,
             // bg gradiend black opacity 1 to black opacity 0.8 at 50% of the card to transparent
             background:
-              "linear-gradient(to top,rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.7) 25%, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0.7) 95%, rgba(0, 0, 0, 0.8) 100%)",
+              "linear-gradient(to top,rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.7) 65px, rgba(0, 0, 0, 0) 130px, rgba(0, 0, 0, 0.7) calc(100% - 20px), rgba(0, 0, 0, 0.8) 100%)",
             display: "flex",
             flexDirection: "column",
             justifyContent: "end",

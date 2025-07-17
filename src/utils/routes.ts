@@ -8,8 +8,10 @@ import AboutPage from "../pages/AboutPage/AboutPage";
 import HomePage from "../pages/HomePage/HomePage";
 import NotFoundPage from "../pages/NotFoundPage/NotFoundPage";
 import SettingsPage from "../pages/SettingsPage/SettingsPage";
+import DownloadIcon from "@mui/icons-material/Download";
 import SongsPage from "../pages/SongsPage/SongsPage";
 import { Route } from "../types/routes";
+import DownloadsPage from "../pages/DownloadsPage/DownloadsPage";
 
 export const notFoundRoute: Route = {
   label: "Not Found",
@@ -33,6 +35,13 @@ export const routes: Route[] = [
     path: "/songs",
     PageComponent: SongsPage,
     Icon: MusicNoteIcon,
+  },
+  {
+    label: "Downloads",
+    name: "downloads",
+    path: "/downloads",
+    PageComponent: DownloadsPage,
+    Icon: DownloadIcon,
   },
   {
     label: "Settings",
