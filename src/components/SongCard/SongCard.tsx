@@ -130,20 +130,24 @@ const SongCard = ({
               size="auto"
               sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}
             >
-              {difficulties?.map((difficulty) => (
-                <Tooltip title={difficulty} key={difficulty}>
-                  <Box
-                    sx={{
-                      marginTop: 0.5,
-                      width: 10,
-                      height: 10,
-                      borderRadius: 5,
-                      backgroundColor:
-                        theme.palette[getDifficultyColor(difficulty)].main,
-                    }}
-                  ></Box>
-                </Tooltip>
-              ))}
+              {isLoading ? (
+                <Skeleton variant="text" width={50} />
+              ) : (
+                difficulties?.map((difficulty) => (
+                  <Tooltip title={difficulty} key={difficulty}>
+                    <Box
+                      sx={{
+                        marginTop: 0.5,
+                        width: 10,
+                        height: 10,
+                        borderRadius: 5,
+                        backgroundColor:
+                          theme.palette[getDifficultyColor(difficulty)].main,
+                      }}
+                    ></Box>
+                  </Tooltip>
+                ))
+              )}
             </Grid>
             <Grid size="grow" textAlign="right">
               <Tooltip
@@ -172,14 +176,14 @@ const SongCard = ({
           >
             {isLoading ? <Skeleton variant="text" width="80%" /> : title}
           </Typography>
-          <Box sx={{ display: "flex", gap: 2 }}>
+          <Box sx={{ display: "flex", gap: 2, width: "100%" }}>
             <Typography
               variant="body2"
               color="text.secondary"
               noWrap
               sx={{ mb: 0 }}
             >
-              {isLoading ? <Skeleton variant="text" width="60%" /> : artist}
+              {isLoading ? <Skeleton variant="text" width="60px" /> : artist}
             </Typography>
             <Typography
               variant="body2"
@@ -188,7 +192,11 @@ const SongCard = ({
               sx={{ mb: 0, flex: 1, textAlign: "right" }}
             >
               {isLoading ? (
-                <Skeleton variant="text" width="60%" />
+                <Skeleton
+                  variant="text"
+                  width="80px"
+                  sx={{ marginLeft: "auto" }}
+                />
               ) : (
                 `${downloads} downloads`
               )}
