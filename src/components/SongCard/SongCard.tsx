@@ -80,7 +80,7 @@ const SongCard = ({
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchEnd}
       sx={{
-        height: 250,
+        aspectRatio: "1 / 1",
         position: "relative",
       }}
     >

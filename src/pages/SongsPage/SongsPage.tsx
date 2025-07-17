@@ -232,7 +232,7 @@ const SongsPage = () => {
         {/* Search bar and filters */}
         <Grid size={12}>
           <Paper sx={{ p: 2 }}>
-            <Grid container spacing={2} alignItems="center">
+            <Grid container alignItems="center">
               {/* Search field */}
               <Grid size={{ xs: 12, md: 6 }}>
                 <TextField
@@ -321,7 +321,7 @@ const SongsPage = () => {
 
         {/* Results */}
         <Grid size={12}>
-          <Grid container spacing={3}>
+          <Grid container spacing={2}>
             {isLoading ? (
               // Skeleton loading
               Array.from({ length: 6 }).map((_, index) => (
