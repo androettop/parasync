@@ -232,7 +232,7 @@ const SongsPage = () => {
         {/* Search bar and filters */}
         <Grid size={12}>
           <Paper sx={{ p: 2 }}>
-            <Grid container alignItems="center">
+            <Grid container spacing={2} alignItems="center">
               {/* Search field */}
               <Grid size={{ xs: 12, md: 6 }}>
                 <TextField
