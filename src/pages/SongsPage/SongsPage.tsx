@@ -2,7 +2,6 @@ import SearchIcon from "@mui/icons-material/Search";
 import {
   Box,
   Button,
-  Chip,
   FormControl,
   Grid,
   InputAdornment,
@@ -18,11 +17,7 @@ import { useEffect, useState } from "react";
 import { Link as RRLink } from "react-router";
 import SongCard from "../../components/SongCard/SongCard";
 import { searchSongs } from "../../game/helpers/apiService";
-import {
-  APISearchResponse,
-  APISong,
-  APISongsResponse,
-} from "../../types/songs";
+import { APISearchResponse, APISong } from "../../types/songs";
 
 const PAGE_SIZE = 40;
 
@@ -35,7 +30,6 @@ const SongsPage = () => {
   // Search states
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("submissionDate");
-  const [filterDifficulty, setFilterDifficulty] = useState("all");
   const [isLoading, setIsLoading] = useState(false);
 
   // Load initial songs
@@ -91,13 +85,6 @@ const SongsPage = () => {
     }, 100);
   };
 
-  const handleDifficultyChange = (event: any) => {
-    setFilterDifficulty(event.target.value);
-    setTimeout(() => {
-      handleSearch(searchQuery, sortBy, 1);
-    }, 100);
-  };
-
   const handleDownload = (songId: string) => {
     // TODO: Implement download logic
   };
@@ -106,9 +93,6 @@ const SongsPage = () => {
     console.log("Playing song:", songId);
     // Song play logic would go here
   };
-
-  // Get all unique difficulties
-  const allDifficulties = ["Hard", "Medium", "Easy", "Expert"];
 
   const cardSize = { xs: 6, sm: 4, md: 4, lg: 3, xl: 2 };
 
@@ -138,7 +122,7 @@ const SongsPage = () => {
           <Paper sx={{ p: 2 }}>
             <Grid container spacing={2} alignItems="center">
               {/* Search field */}
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid size={{ xs: 12, md: 9 }}>
                 <TextField
                   fullWidth
                   placeholder="Search songs or artists..."
@@ -179,25 +163,6 @@ const SongsPage = () => {
                   </Select>
                 </FormControl>
               </Grid>
-
-              {/* Filter by difficulty */}
-              <Grid size={{ xs: 6, md: 3 }}>
-                <FormControl fullWidth>
-                  <InputLabel>Difficulty</InputLabel>
-                  <Select
-                    value={filterDifficulty}
-                    label="Difficulty"
-                    onChange={handleDifficultyChange}
-                  >
-                    <MenuItem value="all">All</MenuItem>
-                    {allDifficulties.map((difficulty) => (
-                      <MenuItem key={difficulty} value={difficulty}>
-                        {difficulty}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
             </Grid>
 
             {/* Search statistics */}
@@ -208,22 +173,6 @@ const SongsPage = () => {
                   : songs.length === 1
                     ? "1 song found"
                     : `${songs.length} songs found`}
-                {searchQuery && (
-                  <Chip
-                    label={`Search: "${searchQuery}"`}
-                    onDelete={() => setSearchQuery("")}
-                    size="small"
-                    sx={{ ml: 1 }}
-                  />
-                )}
-                {filterDifficulty !== "all" && (
-                  <Chip
-                    label={`Difficulty: ${filterDifficulty}`}
-                    onDelete={() => setFilterDifficulty("all")}
-                    size="small"
-                    sx={{ ml: 1 }}
-                  />
-                )}
               </Typography>
             </Box>
           </Paper>
