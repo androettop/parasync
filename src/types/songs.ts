@@ -43,6 +43,9 @@ export type SongData = {
   folderName?: string;
   folderHandle?: FileSystemDirectoryHandle;
 };
+export interface Difficulty {
+  readonly difficultyName: string;
+}
 
 // Types for API-based song integration
 export type APISong = {
@@ -52,9 +55,8 @@ export type APISong = {
   author?: string;
   uploader?: string;
   submissionDate?: string;
-  difficulties: string[];
+  difficulties: Difficulty[];
   downloadCount?: number;
-  url: string;
   albumArt?: string;
   description?: string;
 };

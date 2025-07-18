@@ -1,17 +1,15 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import styles from "./App.module.css";
-import { SongBrowser } from "./components/SongBrowser/SongBrowser";
 import { APIConfig } from "./components/APIConfig/APIConfig";
-import { SongData } from "./types/songs";
-import { loadSongFromZip } from "./game/helpers/zipSongLoader";
-import { getAPIConfig, validateAPIUrl } from "./game/helpers/apiService";
 import GameLoader from "./components/GameLoader/GameLoader";
+import { getAPIConfig, validateAPIUrl } from "./game/helpers/apiService";
+import { SongData } from "./types/songs";
 
 function App() {
   const [selectedSong, setSelectedSong] = useState<SongData | null>(null);
   const [showAPIConfig, setShowAPIConfig] = useState<boolean>(false);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   // Check API configuration on app load
@@ -23,27 +21,9 @@ function App() {
         setShowAPIConfig(true);
       }
     };
-    
+
     checkAPIConfig();
   }, []);
-
-  const handleSongSelect = async (zipBlob: Blob, difficultyFileName: string, songTitle: string) => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const songData = await loadSongFromZip(zipBlob, difficultyFileName, songTitle);
-      if (songData) {
-        setSelectedSong(songData);
-      } else {
-        setError("Failed to load song data");
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load song");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleConfigSaved = () => {
     setShowAPIConfig(false);
@@ -77,7 +57,7 @@ function App() {
       ) : (
         <div className={styles.container}>
           <div className={styles.header}>
-            <button 
+            <button
               onClick={handleOpenAPIConfig}
               className={styles.configButton}
             >
@@ -86,18 +66,10 @@ function App() {
           </div>
 
           {loading && (
-            <div className={styles.loadingMessage}>
-              Loading song...
-            </div>
+            <div className={styles.loadingMessage}>Loading song...</div>
           )}
 
-          {error && (
-            <div className={styles.errorMessage}>
-              {error}
-            </div>
-          )}
-
-          <SongBrowser onSongSelect={handleSongSelect} />
+          {error && <div className={styles.errorMessage}>{error}</div>}
         </div>
       )}
 

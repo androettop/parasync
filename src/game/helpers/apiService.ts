@@ -1,4 +1,4 @@
-import { APISongsResponse, APISearchResponse, APIConfig } from '../../types/songs';
+import { APIConfig, APISearchResponse } from "../../types/songs";
 
 const DEFAULT_API_URL = "http://localhost:3000";
 const API_CONFIG_KEY = "songs_api_config";
@@ -26,48 +26,28 @@ export const saveAPIConfig = (config: APIConfig): void => {
 };
 
 /**
- * Fetches songs from the API with pagination
- */
-export const fetchSongs = async (page: number = 1, limit: number = 20): Promise<APISongsResponse> => {
-  const config = getAPIConfig();
-  const url = new URL(`${config.baseUrl}/songs`);
-  url.searchParams.set("page", page.toString());
-  url.searchParams.set("limit", limit.toString());
-
-  try {
-    const response = await fetch(url.toString());
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    return data as APISongsResponse;
-  } catch (error) {
-    console.error("Error fetching songs:", error);
-    throw new Error("Failed to fetch songs from API");
-  }
-};
-
-/**
  * Searches songs in the API
  */
 export const searchSongs = async (
-  query: string, 
-  page: number = 1, 
-  limit: number = 20
+  query: string,
+  page: number = 1,
+  sort: string = "submissionDate",
+  limit: number = 20,
 ): Promise<APISearchResponse> => {
   const config = getAPIConfig();
   const url = new URL(`${config.baseUrl}/songs/search`);
   url.searchParams.set("q", query);
   url.searchParams.set("page", page.toString());
   url.searchParams.set("limit", limit.toString());
+  url.searchParams.set("sort", sort);
+  url.searchParams.set("sortDirection", "desc");
 
   try {
     const response = await fetch(url.toString());
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    
+
     const data = await response.json();
     return data as APISearchResponse;
   } catch (error) {
@@ -85,21 +65,21 @@ export const downloadSongZip = async (songId: string): Promise<Blob> => {
 
   try {
     const response = await fetch(url, {
-      method: 'GET',
-      redirect: 'follow', // Follow redirects automatically
+      method: "GET",
+      redirect: "follow", // Follow redirects automatically
     });
-    
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    
+
     const blob = await response.blob();
-    
+
     // Verify it's a valid ZIP file
     if (blob.size === 0) {
       throw new Error("Downloaded file is empty");
     }
-    
+
     return blob;
   } catch (error) {
     console.error("Error downloading song zip:", error);

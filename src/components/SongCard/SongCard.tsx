@@ -2,7 +2,6 @@ import {
   Box,
   Card,
   CardActionArea,
-  CardContent,
   CardMedia,
   CircularProgress,
   Grid,
@@ -11,17 +10,17 @@ import {
   Typography,
   useTheme,
 } from "@mui/material";
-import { DownloadState } from "../../types/songs";
-import { getDownloadStateIcon } from "../../utils/icons";
-import { getDifficultyColor, getDownloadStateLabel } from "../../utils/songs";
 import { useRef, useState } from "react";
 import useMarquee from "../../hooks/useMarquee";
+import { Difficulty, DownloadState } from "../../types/songs";
+import { getDownloadStateIcon } from "../../utils/icons";
+import { getDifficultyColor, getDownloadStateLabel } from "../../utils/songs";
 
 export interface SongCardProps {
   title?: string;
   artist?: string;
   coverImage?: string;
-  difficulties?: string[];
+  difficulties?: Difficulty[];
   downloadState?: DownloadState;
   downloads?: number;
   onDownload?: () => void;
@@ -134,7 +133,10 @@ const SongCard = ({
                 <Skeleton variant="text" width={50} />
               ) : (
                 difficulties?.map((difficulty) => (
-                  <Tooltip title={difficulty} key={difficulty}>
+                  <Tooltip
+                    title={difficulty.difficultyName}
+                    key={difficulty.difficultyName}
+                  >
                     <Box
                       sx={{
                         marginTop: 0.5,
@@ -142,7 +144,9 @@ const SongCard = ({
                         height: 10,
                         borderRadius: 5,
                         backgroundColor:
-                          theme.palette[getDifficultyColor(difficulty)].main,
+                          theme.palette[
+                            getDifficultyColor(difficulty.difficultyName)
+                          ].main,
                       }}
                     ></Box>
                   </Tooltip>
