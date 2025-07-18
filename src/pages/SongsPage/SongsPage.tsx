@@ -1,6 +1,7 @@
 import SearchIcon from "@mui/icons-material/Search";
 import {
   Box,
+  Button,
   Chip,
   FormControl,
   Grid,
@@ -57,14 +58,19 @@ const SongsPage = () => {
     setIsLoading(true);
     setError(null);
     try {
+      setCurrentPage(page);
+
       const response: APISearchResponse = await searchSongs(
         searchTerm,
         page,
         sortBy,
         PAGE_SIZE,
       );
-      setSongs(response.data);
-      setCurrentPage(page);
+      if (page !== 1) {
+        setSongs((prev) => [...prev, ...response.data]);
+      } else {
+        setSongs(response.data);
+      }
       setHasMore(response.pagination.hasMore);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to search songs");
@@ -235,7 +241,7 @@ const SongsPage = () => {
                 </Paper>
               </Grid>
             )}
-            {isLoading ? (
+            {isLoading && currentPage === 1 ? (
               // Skeleton loading
               Array.from({ length: PAGE_SIZE }).map((_, index) => (
                 <Grid key={index} size={cardSize}>
@@ -268,6 +274,24 @@ const SongsPage = () => {
                     Try changing your search terms or adjusting the filters
                   </Typography>
                 </Paper>
+              </Grid>
+            )}
+
+            {hasMore && (
+              <Grid size={12}>
+                <Button
+                  sx={{
+                    p: 2,
+                    textAlign: "center",
+                    cursor: "pointer",
+                  }}
+                  disabled={isLoading}
+                  loading={isLoading}
+                  fullWidth
+                  onClick={loadMoreSongs}
+                >
+                  Load more songs
+                </Button>
               </Grid>
             )}
           </Grid>
