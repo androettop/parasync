@@ -1,4 +1,4 @@
-import { APIConfig, APISearchResponse } from "../../types/songs";
+import { APIConfig, APISearchResponse, SortDirection } from "../../types/songs";
 
 const DEFAULT_API_URL = "http://localhost:3000";
 const API_CONFIG_KEY = "songs_api_config";
@@ -32,6 +32,7 @@ export const searchSongs = async (
   query: string,
   page: number = 1,
   sort: string = "submissionDate",
+  sortDirection: SortDirection = "desc",
   limit: number = 20,
 ): Promise<APISearchResponse> => {
   const config = getAPIConfig();
@@ -40,7 +41,7 @@ export const searchSongs = async (
   url.searchParams.set("page", page.toString());
   url.searchParams.set("limit", limit.toString());
   url.searchParams.set("sort", sort);
-  url.searchParams.set("sortDirection", "desc");
+  url.searchParams.set("sortDirection", sortDirection);
 
   try {
     const response = await fetch(url.toString());

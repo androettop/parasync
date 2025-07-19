@@ -4,6 +4,7 @@ import {
   Button,
   FormControl,
   Grid,
+  IconButton,
   InputAdornment,
   InputLabel,
   Link,
@@ -17,7 +18,9 @@ import { useEffect, useState } from "react";
 import { Link as RRLink } from "react-router";
 import SongCard from "../../components/SongCard/SongCard";
 import { searchSongs } from "../../game/helpers/apiService";
-import { APISearchResponse, APISong } from "../../types/songs";
+import { APISearchResponse, APISong, SortDirection } from "../../types/songs";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 
 const PAGE_SIZE = 40;
 
@@ -30,11 +33,12 @@ const SongsPage = () => {
   // Search states
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("submissionDate");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [isLoading, setIsLoading] = useState(false);
 
   // Load initial songs
   useEffect(() => {
-    handleSearch("", "submissionDate");
+    handleSearch();
   }, []);
 
   // Handlers
@@ -43,10 +47,12 @@ const SongsPage = () => {
   };
 
   const handleSearch = async (
-    _searchTerm: string,
-    sortBy: string,
+    _searchTerm: string = "",
+    sortBy: string = "submissionDate",
+    sortByDirection: SortDirection = "desc",
     page = 1,
   ) => {
+    if (isLoading) return; // Prevent multiple concurrent searches
     const searchTerm = _searchTerm.trim();
 
     setIsLoading(true);
@@ -58,6 +64,7 @@ const SongsPage = () => {
         searchTerm,
         page,
         sortBy,
+        sortByDirection,
         PAGE_SIZE,
       );
       if (page !== 1) {
@@ -75,14 +82,13 @@ const SongsPage = () => {
 
   const loadMoreSongs = async () => {
     if (isLoading || !hasMore) return;
-    handleSearch(searchQuery, sortBy, currentPage + 1);
+    handleSearch(searchQuery, sortBy, sortDirection, currentPage + 1);
   };
 
   const handleSortChange = (event: any) => {
-    setSortBy(event.target.value);
-    setTimeout(() => {
-      handleSearch(searchQuery, event.target.value, 1);
-    }, 100);
+    const newSortBy = event.target.value;
+    setSortBy(newSortBy);
+    handleSearch(searchQuery, newSortBy, sortDirection, 1);
   };
 
   const handleDownload = (songId: string) => {
@@ -92,6 +98,12 @@ const SongsPage = () => {
   const handlePlay = (songId: string) => {
     console.log("Playing song:", songId);
     // Song play logic would go here
+  };
+
+  const handleSortDirectionToggle = () => {
+    const newSortDirection = sortDirection === "asc" ? "desc" : "asc";
+    setSortDirection(newSortDirection);
+    handleSearch(searchQuery, sortBy, newSortDirection, 1);
   };
 
   const cardSize = { xs: 6, sm: 4, md: 4, lg: 3, xl: 2 };
@@ -122,9 +134,10 @@ const SongsPage = () => {
           <Paper sx={{ p: 2 }}>
             <Grid container spacing={2} alignItems="center">
               {/* Search field */}
-              <Grid size={{ xs: 12, md: 9 }}>
+              <Grid size={{ xs: 12, md: "grow" }}>
                 <TextField
                   fullWidth
+                  size="small"
                   placeholder="Search songs or artists..."
                   value={searchQuery}
                   onChange={handleSearchChange}
@@ -147,13 +160,18 @@ const SongsPage = () => {
               </Grid>
 
               {/* Sort by */}
-              <Grid size={{ xs: 6, md: 3 }}>
+              <Grid size={{ xs: "grow", md: 3 }}>
                 <FormControl fullWidth>
                   <InputLabel>Sort by</InputLabel>
                   <Select
                     value={sortBy}
                     label="Sort by"
                     onChange={handleSortChange}
+                    size="small"
+                    disabled={isLoading}
+                    MenuProps={{
+                      disableScrollLock: true,
+                    }}
                   >
                     <MenuItem value="submissionDate">Upload date</MenuItem>
                     <MenuItem value="title">Title</MenuItem>
@@ -163,16 +181,37 @@ const SongsPage = () => {
                   </Select>
                 </FormControl>
               </Grid>
+
+              {/* Sort direction toggle */}
+              <Grid size={{ xs: "auto" }}>
+                <IconButton
+                  centerRipple
+                  sx={{ height: 40, width: 40 }}
+                  disabled={isLoading}
+                  onClick={() => handleSortDirectionToggle()}
+                >
+                  {sortDirection === "asc" ? (
+                    <ArrowUpwardIcon />
+                  ) : (
+                    <ArrowDownwardIcon />
+                  )}
+                </IconButton>
+              </Grid>
             </Grid>
 
             {/* Search statistics */}
             <Box sx={{ mt: 2 }}>
-              <Typography variant="body2" color="text.secondary">
-                {isLoading
-                  ? "Loading..."
-                  : songs.length === 1
-                    ? "1 song found"
-                    : `${songs.length} songs found`}
+              <Typography
+                variant="body2"
+                color={!isLoading && error ? "error" : "text.secondary"}
+              >
+                {isLoading && "Loading..."}
+                {!isLoading && !error && songs.length === 1 && "1 song found"}
+                {!isLoading &&
+                  !error &&
+                  songs.length > 1 &&
+                  `${songs.length} songs found`}
+                {!isLoading && error && `Error: ${error}`}
               </Typography>
             </Box>
           </Paper>
@@ -181,15 +220,6 @@ const SongsPage = () => {
         {/* Results */}
         <Grid size={12}>
           <Grid container spacing={2}>
-            {error && (
-              <Grid size={12}>
-                <Paper sx={{ p: 4, textAlign: "center" }}>
-                  <Typography variant="h6" color="error">
-                    Error: {error}
-                  </Typography>
-                </Paper>
-              </Grid>
-            )}
             {isLoading && currentPage === 1 ? (
               // Skeleton loading
               Array.from({ length: PAGE_SIZE }).map((_, index) => (
@@ -237,6 +267,7 @@ const SongsPage = () => {
                   disabled={isLoading}
                   loading={isLoading}
                   fullWidth
+                  variant="outlined"
                   onClick={loadMoreSongs}
                 >
                   Load more songs

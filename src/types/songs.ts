@@ -43,6 +43,9 @@ export type SongData = {
   folderName?: string;
   folderHandle?: FileSystemDirectoryHandle;
 };
+
+export type SortDirection = "asc" | "desc";
+
 export interface Difficulty {
   readonly difficultyName: string;
 }

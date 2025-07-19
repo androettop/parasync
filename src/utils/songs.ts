@@ -1,7 +1,7 @@
 import { DownloadState } from "../types/songs";
 
 export const getDifficultyColor = (difficulty: string) => {
-  const lowerDiff = difficulty.toLowerCase();
+  const lowerDiff = difficulty?.toLowerCase();
   switch (lowerDiff) {
     case "easy":
       return "success";
