@@ -1,9 +1,10 @@
 import { Box, Button, Grid, Link, Paper, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
-import { Link as RRLink } from "react-router";
+import { Link as RRLink, useNavigate } from "react-router";
 import SongCard from "../../components/SongCard/SongCard";
-import { LocalSong } from "../../types/songs";
+import { Difficulty, LocalSong } from "../../types/songs";
 import {
+  getGameSongFilePath,
   getLocalSongs,
   getStoredDirectoryHandle,
   hasSongsFolderPermissions,
@@ -16,6 +17,7 @@ const MySongs = () => {
   const [songs, setSongs] = useState<LocalSong[]>([]);
   const [hasFSPermissions, setHasFSPermissions] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
   const unsupportedBrowser = !isFileSystemAccessSupported();
 
   // Check for existing permissions on component mount
@@ -43,9 +45,10 @@ const MySongs = () => {
     checkPermissions();
   }, []);
 
-  const handlePlay = (song: LocalSong) => {
+  const handlePlay = async (song: LocalSong, difficulty: Difficulty) => {
     // Logic to play the song
-    console.log(`Playing song with ID: ${song.song.id}`);
+    const songFileName = await getGameSongFilePath(song, difficulty);
+    navigate(`/play/${songFileName}`);
   };
 
   const handleSelectSongsFolder = async () => {
@@ -129,7 +132,7 @@ const MySongs = () => {
                       coverImage={localSong.song.coverUrl || ""}
                       difficulties={localSong.song.difficulties}
                       downloadState={"downloaded"}
-                      onPlay={() => handlePlay(localSong)}
+                      onPlay={(difficulty) => handlePlay(localSong, difficulty)}
                       downloads={localSong.song.downloads || 0}
                     />
                   </Grid>

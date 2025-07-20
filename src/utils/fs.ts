@@ -1,5 +1,11 @@
 import { v4 as uuid } from "uuid";
-import { Difficulty, LocalSong, ParadiddleSong, Song } from "../types/songs";
+import {
+  Difficulty,
+  LocalSong,
+  ParadiddleSong,
+  Song,
+  SongData,
+} from "../types/songs";
 
 /**
  * Check if File System Access API is supported
@@ -214,4 +220,35 @@ export const getLocalSongs = async (
     }
   }
   return songs;
+};
+
+export const getGameSongFilePath = async (
+  song: LocalSong,
+  difficulty: Difficulty,
+): Promise<string> => {
+  // find in the folder the rlrr file ending with the difficulty
+  for await (const entry of song.folderHandle.values()) {
+    if (entry.kind === "file" && entry.name.endsWith(`_${difficulty}.rlrr`)) {
+      return `${song.folderHandle.name}/${entry.name}`;
+    }
+  }
+
+  throw new Error(`Song data for difficulty ${difficulty} not found`);
+};
+
+export const getGameSong = async (
+  handle: FileSystemDirectoryHandle,
+  filePath: string,
+): Promise<SongData> => {
+  const folderName = filePath.split("/")[0];
+  const songFolderHandle = await handle.getDirectoryHandle(folderName);
+  const fileHandle = await handle.getFileHandle(filePath);
+  const file = await fileHandle.getFile();
+  const songData = await file.text();
+  const parsedSong: ParadiddleSong = JSON.parse(songData);
+  return {
+    ...parsedSong,
+    id: uuid(),
+    folderHandle: songFolderHandle,
+  };
 };

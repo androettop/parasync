@@ -36,7 +36,8 @@ export type BPMEventData = {
 /**
  * Legacy song data type used in the player
  *
- * TODO: Unify this with the Song type
+ * TODO: Unify this with the ParadiddleSong type
+ * @deprecated
  */
 export type SongData = ParadiddleSong & {
   // Additional fields to handle files (not present in the original JSON)
@@ -74,5 +75,5 @@ export type Song = {
 
 export type LocalSong = {
   song: Song;
-  folderHandle?: FileSystemDirectoryHandle;
+  folderHandle: FileSystemDirectoryHandle;
 };
