@@ -10,8 +10,9 @@ import DownloadIcon from "@mui/icons-material/Download";
 import DebugIcon from "@mui/icons-material/BugReport";
 import SongsPage from "../pages/SongsPage/SongsPage";
 import { Route } from "../types/routes";
-import MySongs from "../pages/MySongs/MySongs";
+import MySongsPage from "../pages/MySongsPage/MySongsPage";
 import App from "../App";
+import PlayerPage from "../pages/PlayerPage/PlayerPage";
 
 export const notFoundRoute: Route = {
   label: "Not Found",
@@ -26,7 +27,7 @@ export const routes: Route[] = [
     label: "My Songs",
     name: "mysongs",
     path: "/",
-    PageComponent: MySongs,
+    PageComponent: MySongsPage,
     Icon: DownloadIcon,
   },
   {
@@ -56,6 +57,13 @@ export const routes: Route[] = [
     path: "/about",
     PageComponent: AboutPage,
     Icon: InfoIcon,
+  },
+  {
+    label: "Player",
+    name: "play",
+    path: "/play",
+    PageComponent: PlayerPage,
+    hideInDrawer: true,
   },
 
   notFoundRoute, // This route should always be the last one to catch all unmatched paths

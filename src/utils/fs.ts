@@ -241,8 +241,9 @@ export const getGameSong = async (
   filePath: string,
 ): Promise<SongData> => {
   const folderName = filePath.split("/")[0];
+  const fileName = filePath.split("/")[1];
   const songFolderHandle = await handle.getDirectoryHandle(folderName);
-  const fileHandle = await handle.getFileHandle(filePath);
+  const fileHandle = await songFolderHandle.getFileHandle(fileName);
   const file = await fileHandle.getFile();
   const songData = await file.text();
   const parsedSong: ParadiddleSong = JSON.parse(songData);

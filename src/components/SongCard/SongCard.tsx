@@ -50,6 +50,10 @@ const SongCard = ({
   const songCardTouchTimeout = useRef<number>(0);
   const isMenuOpen = Boolean(anchorEl);
 
+  const orderedDifficulties = (
+    ["Easy", "Medium", "Hard", "Expert"] as Difficulty[]
+  ).filter((difficulty) => difficulties?.includes(difficulty));
+
   useMarquee(titleRef, isHovering);
 
   const handleCloseMenu = () => {
@@ -149,7 +153,7 @@ const SongCard = ({
                 {isLoading ? (
                   <Skeleton variant="text" width={50} />
                 ) : (
-                  difficulties?.map((difficulty) => (
+                  orderedDifficulties?.map((difficulty) => (
                     <Tooltip title={difficulty} key={difficulty}>
                       <Box
                         sx={{
@@ -242,7 +246,7 @@ const SongCard = ({
           },
         }}
       >
-        {difficulties?.map((difficulty) => (
+        {orderedDifficulties?.map((difficulty) => (
           <MenuItem
             key={difficulty}
             onClick={() => handleChooseDifficulty(difficulty)}

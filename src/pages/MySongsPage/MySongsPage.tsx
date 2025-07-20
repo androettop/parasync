@@ -13,7 +13,7 @@ import {
 } from "../../utils/fs";
 import { CARD_SIZE } from "../../utils/songs";
 
-const MySongs = () => {
+const MySongsPage = () => {
   const [songs, setSongs] = useState<LocalSong[]>([]);
   const [hasFSPermissions, setHasFSPermissions] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,7 +48,7 @@ const MySongs = () => {
   const handlePlay = async (song: LocalSong, difficulty: Difficulty) => {
     // Logic to play the song
     const songFileName = await getGameSongFilePath(song, difficulty);
-    navigate(`/play/${songFileName}`);
+    navigate(`/play?file=${songFileName}`);
   };
 
   const handleSelectSongsFolder = async () => {
@@ -162,4 +162,4 @@ const MySongs = () => {
   );
 };
 
-export default MySongs;
+export default MySongsPage;
