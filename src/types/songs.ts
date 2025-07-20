@@ -31,6 +31,10 @@ export type BPMEventData = {
   time: number;
 };
 
+/**
+ * Legacy song data type used in the player
+ * TODO: Unify this with the Song type
+ */
 export type SongData = {
   version: number;
   recordingMetadata: RecordingMetadata;
@@ -44,67 +48,21 @@ export type SongData = {
   folderHandle?: FileSystemDirectoryHandle;
 };
 
+// React types
+
 export type SortDirection = "asc" | "desc";
 
-export interface Difficulty {
-  readonly difficultyName: string;
-}
-
-// Types for API-based song integration
-export type APISong = {
-  id: string;
-  title: string;
-  artist: string;
-  author?: string;
-  uploader?: string;
-  submissionDate?: string;
-  difficulties: Difficulty[];
-  downloadCount?: number;
-  albumArt?: string;
-  description?: string;
-};
-
-export type APIPagination = {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-  hasMore: boolean;
-};
-
-export type APISearchInfo = {
-  query: string;
-  resultsCount: number;
-  searchTime: string;
-};
-
-export type APISongsResponse = {
-  data: APISong[];
-  pagination: APIPagination;
-  timestamp: string;
-};
-
-export type APISearchResponse = {
-  data: APISong[];
-  search: APISearchInfo;
-  pagination: APIPagination;
-  timestamp: string;
-};
-
-export type APIConfig = {
-  baseUrl: string;
-};
-
-// Extended SongData for zip-based songs
-export type SongDataWithZip = SongData & {
-  zipBlob?: Blob;
-  zipEntries?: Map<string, ZipEntry>;
-};
-
-export type ZipEntry = {
-  name: string;
-  data: Uint8Array;
-  isDirectory: boolean;
-};
+export type Difficulty = "easy" | "medium" | "hard" | "expert";
 
 export type DownloadState = "not-downloaded" | "downloading" | "downloaded";
+
+export type Song = {
+  id: string;
+  uploadedAt: string; // ISO date string
+  uploadedBy: string;
+  title: string;
+  artist: string;
+  downloads: number;
+  coverUrl: string;
+  difficulties: Difficulty[];
+};
