@@ -184,22 +184,24 @@ const SongCard = ({
             >
               {isLoading ? <Skeleton variant="text" width="60px" /> : artist}
             </Typography>
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              noWrap
-              sx={{ mb: 0, flex: 1, textAlign: "right" }}
-            >
-              {isLoading ? (
-                <Skeleton
-                  variant="text"
-                  width="80px"
-                  sx={{ marginLeft: "auto" }}
-                />
-              ) : (
-                `${downloads} downloads`
-              )}
-            </Typography>
+            {!!downloads && (
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                noWrap
+                sx={{ mb: 0, flex: 1, textAlign: "right" }}
+              >
+                {isLoading ? (
+                  <Skeleton
+                    variant="text"
+                    width="80px"
+                    sx={{ marginLeft: "auto" }}
+                  />
+                ) : (
+                  `${downloads} downloads`
+                )}
+              </Typography>
+            )}
           </Box>
         </Box>
       </CardActionArea>

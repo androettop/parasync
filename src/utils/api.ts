@@ -65,6 +65,10 @@ export class SongRepository {
       throw new Error("Repository name is required");
     }
 
+    if (!this.config.display_name) {
+      throw new Error("Repository display_name is required");
+    }
+
     if (!this.config.search_url || !this.config.search_url.startsWith("~")) {
       throw new Error("search_url must be an expression starting with ~");
     }

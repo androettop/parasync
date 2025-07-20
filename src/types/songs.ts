@@ -38,13 +38,7 @@ export type BPMEventData = {
  *
  * TODO: Unify this with the Song type
  */
-export type SongData = {
-  version: number;
-  recordingMetadata: RecordingMetadata;
-  audioFileData: AudioFileData;
-  instruments: InstrumentData[];
-  events: EventData[];
-  bpmEvents: BPMEventData[];
+export type SongData = ParadiddleSong & {
   // Additional fields to handle files (not present in the original JSON)
   id: string;
   folderName?: string;
@@ -54,9 +48,18 @@ export type SongData = {
 // Webapp types
 export type SortDirection = "asc" | "desc";
 
-export type Difficulty = "easy" | "medium" | "hard" | "expert";
+export type Difficulty = "Easy" | "Medium" | "Hard" | "Expert";
 
 export type DownloadState = "not-downloaded" | "downloading" | "downloaded";
+
+export type ParadiddleSong = {
+  version: number;
+  recordingMetadata: RecordingMetadata;
+  audioFileData: AudioFileData;
+  instruments: InstrumentData[];
+  events: EventData[];
+  bpmEvents: BPMEventData[];
+};
 
 export type Song = {
   id: string;
@@ -67,4 +70,9 @@ export type Song = {
   downloads: number;
   coverUrl: string;
   difficulties: Difficulty[];
+};
+
+export type LocalSong = {
+  song: Song;
+  folderHandle?: FileSystemDirectoryHandle;
 };

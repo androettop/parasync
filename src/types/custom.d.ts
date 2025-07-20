@@ -33,6 +33,9 @@ interface FileSystemDirectoryHandle extends FileSystemHandle {
     name: string,
     options?: { create?: boolean },
   ): Promise<FileSystemDirectoryHandle>;
+  values(): AsyncIterableIterator<
+    FileSystemFileHandle | FileSystemDirectoryHandle
+  >;
 }
 
 interface DirectoryPickerOptions {

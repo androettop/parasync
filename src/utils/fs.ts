@@ -1,3 +1,6 @@
+import { v4 as uuid } from "uuid";
+import { Difficulty, LocalSong, ParadiddleSong, Song } from "../types/songs";
+
 /**
  * Check if File System Access API is supported
  */
@@ -151,3 +154,64 @@ export const selectSongsFolder =
       throw error;
     }
   };
+
+export const getLocalSongs = async (
+  handle: FileSystemDirectoryHandle,
+): Promise<LocalSong[]> => {
+  const songs: LocalSong[] = [];
+
+  // Loop each song folder
+  for await (const entry of handle.values()) {
+    if (entry.kind === "directory") {
+      const subHandle = await handle.getDirectoryHandle(entry.name);
+      // Loop each file in the subdirectory
+      const song: Partial<Song> = {
+        id: uuid(),
+        difficulties: [],
+        downloads: 0,
+        uploadedAt: new Date().toISOString(),
+        uploadedBy: "Local User",
+      };
+      for await (const subEntry of subHandle.values()) {
+        if (subEntry.kind === "file" && subEntry.name.endsWith(".rlrr")) {
+          try {
+            const file = await subEntry.getFile();
+            const songData = await file.text();
+            const parsedSong: ParadiddleSong = JSON.parse(songData);
+            if (!song.title) {
+              song.title = parsedSong.recordingMetadata.title;
+            }
+            if (!song.artist) {
+              song.artist = parsedSong.recordingMetadata.artist;
+            }
+            if (!song.uploadedBy) {
+              song.uploadedBy = parsedSong.recordingMetadata.creator;
+            }
+            if (!song.coverUrl) {
+              const imageHandle = await subHandle.getFileHandle(
+                parsedSong.recordingMetadata.coverImagePath,
+              );
+              const imageFile = await imageHandle.getFile();
+              song.coverUrl = URL.createObjectURL(imageFile);
+            }
+            const difficulty = (subEntry.name
+              .split("_")
+              .pop()
+              ?.replace(".rlrr", "") || "Easy") as Difficulty;
+            song.difficulties?.push(difficulty);
+          } catch (error) {
+            console.error(`Error reading song file ${subEntry.name}:`, error);
+          }
+        }
+      }
+      if (song.difficulties?.length) {
+        const localSong: LocalSong = {
+          song: song as Song,
+          folderHandle: subHandle,
+        };
+        songs.push(localSong);
+      }
+    }
+  }
+  return songs;
+};

@@ -1,4 +1,5 @@
-name: ParaDB (api 2025-03-03)
+display_name: ParaDB (api 2025-03-03)
+name: paradb
 
 search_url: |
   ~'https://paradb.net/api/maps?' ||
@@ -28,13 +29,6 @@ response:
     difficulties: |
       ~
       map(
-        caseFn(
-          ['Easy','Medium', 'Hard', 'Expert'],
-          ['easy', 'medium', 'hard','expert'],
-          'easy'
-        ),
-        map(
-          getFn('difficultyName'),
-          song.difficulties
-        )
+        getFn('difficultyName'),
+        song.difficulties
       )
