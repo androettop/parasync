@@ -1,7 +1,6 @@
-import { AccountCircle, Menu as MenuIcon } from "@mui/icons-material";
+import { Menu as MenuIcon } from "@mui/icons-material";
 import {
   AppBar,
-  Avatar,
   Box,
   Container,
   Divider,
@@ -19,7 +18,7 @@ import {
   useMediaQuery,
   useTheme,
 } from "@mui/material";
-import React, { useState } from "react";
+import { useState } from "react";
 import { Outlet, To, useNavigate } from "react-router";
 import { notFoundRoute, routes } from "../../utils/routes";
 
@@ -52,10 +51,6 @@ const Layout = () => {
     if (!isClosing) {
       setIsDrawerOpen(!isDrawerOpen);
     }
-  };
-
-  const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
   };
 
   const handleMenuClose = () => {

@@ -1,6 +1,6 @@
 import { Box } from "@mui/material";
 import { useEffect, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import GameLoader from "../../components/GameLoader/GameLoader";
 import { SongData } from "../../types/songs";
 import {
