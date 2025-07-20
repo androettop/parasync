@@ -118,23 +118,7 @@ const Layout = () => {
 
             {/* Right side icons */}
             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <IconButton
-                size="large"
-                edge="end"
-                aria-label="account of current user"
-                aria-controls="primary-search-account-menu"
-                aria-haspopup="true"
-                onClick={handleProfileMenuOpen}
-                color="inherit"
-              >
-                <Avatar
-                  sx={{ width: 32, height: 32 }}
-                  alt="User Avatar"
-                  src="/static/images/avatar/2.jpg"
-                >
-                  <AccountCircle />
-                </Avatar>
-              </IconButton>
+              {/* TODO: Add user profile options */}
             </Box>
           </Toolbar>
         </AppBar>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 
 type SetStateAction<T> = T | ((prevState: T) => T);
 type StorageEventCallback = (this: Window, ev: StorageEvent) => void;
@@ -79,6 +79,9 @@ export function useLocalStorage<T>(
     }
   }, [key, initialValue]);
 
-  const parsed = store ? JSON.parse(store) : initialValue;
+  const parsed = useMemo(
+    () => (store ? JSON.parse(store) : initialValue),
+    [store, initialValue],
+  );
   return [parsed as T, setState];
 }

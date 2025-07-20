@@ -3,7 +3,9 @@ import { decode as decodeMsgPack } from "msgpackr";
 import { RepoConfig, SearchParams } from "../types/api";
 import { Song } from "../types/songs";
 export class SongRepository {
-  private config: RepoConfig;
+  config: RepoConfig;
+  isLoading: boolean = false;
+
   private exprParser: ExprParser;
 
   constructor(config: RepoConfig) {
@@ -134,53 +136,62 @@ export class SongRepository {
   }
 
   async search(params: SearchParams): Promise<Song[]> {
-    const context = { ...(params || {}) };
+    this.isLoading = true;
+    try {
+      const context = { ...(params || {}) };
 
-    // evaluate search URL
-    const url = this.evaluateField(this.config.search_url, context);
-    if (typeof url !== "string") {
-      throw new Error(`Invalid search URL, expected string, got ${typeof url}`);
-    }
-
-    // evaluate headers
-    const headers: Record<string, string> = {};
-    for (const header of this.config.headers || []) {
-      const [key, rawValue] = Object.entries(header)[0];
-      headers[key] = this.evaluateField(rawValue, context)?.toString() || "";
-    }
-
-    // make request
-    const response = await fetch(url, { headers });
-
-    // deserialize response
-    let data: any;
-    if (this.config.response.serializer === "msgpackr") {
-      const buffer = await response.arrayBuffer();
-      data = decodeMsgPack(new Uint8Array(buffer));
-    } else {
-      data = await response.json();
-    }
-
-    // get songs array
-    const items =
-      this.evaluateField(this.config.response.songs_array, {
-        response: data,
-      }) || [];
-    if (!Array.isArray(items)) {
-      throw new Error(
-        `Expected expression result to be an array, got ${typeof items}`,
-      );
-    }
-
-    // map songs items
-    return items.map((song: any) => {
-      const result: Record<string, any> = {};
-      for (const [field, expr] of Object.entries(this.config.response.fields)) {
-        result[field] = this.evaluateField(expr, { song });
+      // evaluate search URL
+      const url = this.evaluateField(this.config.search_url, context);
+      if (typeof url !== "string") {
+        throw new Error(
+          `Invalid search URL, expected string, got ${typeof url}`,
+        );
       }
-      // Here we trust in the config to provide the correct types
-      return result as Song;
-    });
+
+      // evaluate headers
+      const headers: Record<string, string> = {};
+      for (const header of this.config.headers || []) {
+        const [key, rawValue] = Object.entries(header)[0];
+        headers[key] = this.evaluateField(rawValue, context)?.toString() || "";
+      }
+
+      // make request
+      const response = await fetch(url, { headers });
+
+      // deserialize response
+      let data: any;
+      if (this.config.response.serializer === "msgpackr") {
+        const buffer = await response.arrayBuffer();
+        data = decodeMsgPack(new Uint8Array(buffer));
+      } else {
+        data = await response.json();
+      }
+
+      // get songs array
+      const items =
+        this.evaluateField(this.config.response.songs_array, {
+          response: data,
+        }) || [];
+      if (!Array.isArray(items)) {
+        throw new Error(
+          `Expected expression result to be an array, got ${typeof items}`,
+        );
+      }
+
+      // map songs items
+      return items.map((song: any) => {
+        const result: Record<string, any> = {};
+        for (const [field, expr] of Object.entries(
+          this.config.response.fields,
+        )) {
+          result[field] = this.evaluateField(expr, { song });
+        }
+        // Here we trust in the config to provide the correct types
+        return result as Song;
+      });
+    } finally {
+      this.isLoading = false;
+    }
   }
 
   private evaluateField(
