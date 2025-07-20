@@ -121,8 +121,12 @@ const SongsPage = () => {
     });
   };
 
-  const handleDownload = (_songId: string) => {
-    // TODO: Implement download logic
+  const handleDownload = (song: Song) => {
+    // TODO: Download, unzip and save song in the songs folder
+    const downloadUrl = song.downloadUrl;
+    if (downloadUrl) {
+      window.open(downloadUrl, "_blank");
+    }
   };
 
   const handleSortDirectionToggle = () => {
@@ -272,7 +276,7 @@ const SongsPage = () => {
                       coverImage={song.coverUrl || ""}
                       difficulties={song.difficulties}
                       downloadState={"not-downloaded"}
-                      onDownload={() => handleDownload(song.id)}
+                      onDownload={() => handleDownload(song)}
                       downloads={song.downloads || 0}
                     />
                   </Grid>

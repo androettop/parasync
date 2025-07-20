@@ -95,6 +95,7 @@ export class SongRepository {
       "downloads",
       "coverUrl",
       "difficulties",
+      "downloadUrl",
     ];
 
     // check for invalid fields

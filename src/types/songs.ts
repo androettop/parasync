@@ -71,6 +71,7 @@ export type Song = {
   downloads: number;
   coverUrl: string;
   difficulties: Difficulty[];
+  downloadUrl: string;
 };
 
 export type LocalSong = {
