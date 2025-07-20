@@ -1,83 +1,110 @@
 import { Parser as ExprParser } from "expr-eval";
 import { decode as decodeMsgPack } from "msgpackr";
-
-type Config = {
-  name: string;
-  search_url: string;
-  headers?: Record<string, string>[];
-  response: {
-    songs_array: string;
-    serializer?: "none" | "msgpackr";
-    fields: Record<string, string>;
-  };
-};
-
-type SearchParams = {
-  query: string;
-  page: number;
-  pageSize: number;
-  sortBy: string;
-  sortDirection: "asc" | "desc";
-};
-
+import { RepoConfig, SearchParams } from "../types/api";
+import { Song } from "../types/songs";
 export class SongRepository {
-  private config: Config;
+  private config: RepoConfig;
   private exprParser: ExprParser;
 
-  constructor(config: Config) {
-    this.validateConfig();
+  constructor(config: RepoConfig) {
     this.config = config;
+    this.validateConfig();
+
     this.exprParser = new ExprParser();
 
-    // Add custom functions
+    /**
+     * Mapper function to map keys to values based on a case expression.
+     */
+    this.exprParser.functions.caseFn =
+      (keys: any[], values: any[], fallback?: any) => (value: any) => {
+        const index = keys.indexOf(value);
+        return index >= 0
+          ? values[index]
+          : fallback !== undefined
+            ? fallback
+            : value;
+      };
+
+    /**
+     * Function to map keys to values based on a case expression.
+     */
     this.exprParser.functions.case = (
       value: any,
       keys: any[],
       values: any[],
       fallback?: any,
     ) => {
-      const index = keys.indexOf(value);
-      return index >= 0
-        ? values[index]
-        : fallback !== undefined
-          ? fallback
-          : value;
+      return this.exprParser.functions.caseFn(keys, values, fallback)(value);
+    };
+
+    /**
+     * Mapper function to get a field from an object.
+     */
+    this.exprParser.functions.getFn =
+      (field: string) => (obj: Record<string, unknown>) => {
+        return obj[field];
+      };
+
+    /**
+     * Function to get a field from an object.
+     */
+    this.exprParser.functions.get = (
+      obj: Record<string, unknown>,
+      field: string,
+    ) => {
+      return this.exprParser.functions.getFn(field)(obj);
     };
 
     this.exprParser.functions.encodeURIComponent = encodeURIComponent;
   }
 
   validateConfig() {
-    // chequear los campos obligatorios.
-    // Revisar que search_url sea una expresion (que comience con ~)
-    // response.songs_array sea una expresion
-    // fields solo contenga campos validos ["id", "title", "artist", "album", "duration", "coverUrl"]
     if (!this.config.name) {
       throw new Error("Repository name is required");
     }
+
     if (!this.config.search_url || !this.config.search_url.startsWith("~")) {
       throw new Error("search_url must be an expression starting with ~");
     }
+
     if (!this.config.response || !this.config.response.songs_array) {
       throw new Error(
         "response.songs_array is required and must be an expression starting with ~",
       );
     }
+
     if (
       !this.config.response.fields ||
       typeof this.config.response.fields !== "object"
     ) {
       throw new Error("response.fields must be an object with field mappings");
     }
+
+    const validFields = [
+      "id",
+      "uploadedAt",
+      "uploadedBy",
+      "title",
+      "artist",
+      "downloads",
+      "coverUrl",
+      "difficulties",
+    ];
+
+    // check for invalid fields
     for (const field of Object.keys(this.config.response.fields)) {
-      if (
-        !["id", "title", "artist", "album", "duration", "coverUrl"].includes(
-          field,
-        )
-      ) {
+      if (!validFields.includes(field)) {
         throw new Error(`Invalid field "${field}" in response.fields`);
       }
     }
+
+    // check for missing fields
+    for (const field of validFields) {
+      if (!this.config.response.fields[field]) {
+        throw new Error(`Missing field "${field}" in response.fields`);
+      }
+    }
+
     if (
       this.config.response.serializer &&
       !["none", "msgpackr"].includes(this.config.response.serializer)
@@ -86,6 +113,7 @@ export class SongRepository {
         `Invalid serializer "${this.config.response.serializer}"`,
       );
     }
+
     if (this.config.headers) {
       for (const header of this.config.headers) {
         if (typeof header !== "object" || Object.keys(header).length !== 1) {
@@ -105,7 +133,7 @@ export class SongRepository {
     }
   }
 
-  async search(params: SearchParams): Promise<any[]> {
+  async search(params: SearchParams): Promise<Song[]> {
     const context = { ...(params || {}) };
 
     // evaluate search URL
@@ -118,7 +146,7 @@ export class SongRepository {
     const headers: Record<string, string> = {};
     for (const header of this.config.headers || []) {
       const [key, rawValue] = Object.entries(header)[0];
-      headers[key] = this.evaluateField(rawValue, context).toString();
+      headers[key] = this.evaluateField(rawValue, context)?.toString() || "";
     }
 
     // make request
@@ -149,21 +177,28 @@ export class SongRepository {
       for (const [field, expr] of Object.entries(this.config.response.fields)) {
         result[field] = this.evaluateField(expr, { song });
       }
-      return result;
+      // Here we trust in the config to provide the correct types
+      return result as Song;
     });
   }
 
   private evaluateField(
     raw: string,
     context: Record<string, any>,
-  ): string | number {
+  ): string | number | boolean | object | undefined {
     if (typeof raw === "string" && raw.startsWith("~")) {
       const result = this.exprParser.evaluate(raw.slice(1), context);
-      if (typeof result === "string" || typeof result === "number") {
+      if (
+        typeof result === "string" ||
+        typeof result === "number" ||
+        typeof result === "boolean" ||
+        typeof result === "undefined" ||
+        (typeof result === "object" && result !== null)
+      ) {
         return result;
       } else {
         throw new Error(
-          `Invalid expression result, expected string or number, got ${typeof result}`,
+          `Invalid expression result (${raw.slice(1)}), expected string, number, boolean, or object, got ${typeof result}`,
         );
       }
     }

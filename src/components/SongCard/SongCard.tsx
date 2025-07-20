@@ -133,10 +133,7 @@ const SongCard = ({
                 <Skeleton variant="text" width={50} />
               ) : (
                 difficulties?.map((difficulty) => (
-                  <Tooltip
-                    title={difficulty.difficultyName}
-                    key={difficulty.difficultyName}
-                  >
+                  <Tooltip title={difficulty} key={difficulty}>
                     <Box
                       sx={{
                         marginTop: 0.5,
@@ -144,9 +141,7 @@ const SongCard = ({
                         height: 10,
                         borderRadius: 5,
                         backgroundColor:
-                          theme.palette[
-                            getDifficultyColor(difficulty.difficultyName)
-                          ].main,
+                          theme.palette[getDifficultyColor(difficulty)].main,
                       }}
                     ></Box>
                   </Tooltip>
