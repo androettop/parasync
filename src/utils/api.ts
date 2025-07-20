@@ -162,9 +162,10 @@ export class SongRepository {
     }
 
     // get songs array
-    const items = this.evaluateField(this.config.response.songs_array, {
-      response: data,
-    });
+    const items =
+      this.evaluateField(this.config.response.songs_array, {
+        response: data,
+      }) || [];
     if (!Array.isArray(items)) {
       throw new Error(
         `Expected expression result to be an array, got ${typeof items}`,

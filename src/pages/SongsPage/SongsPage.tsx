@@ -28,7 +28,7 @@ const PAGE_SIZE = 40;
 const config: RepoConfig = {
   name: "SampleAPI",
   search_url:
-    "~'https://sampleapi.com/api/maps?' ||\n'query=' || encodeURIComponent(query) ||\n'&limit=' || pageSize ||\n'&offset=' || ((page - 1) * pageSize) ||\n'&sort=' || case(\n  sortBy,\n  ['artist', 'title', 'duration'],\n  ['author', 'name', 'length'],\n  'submissionDate'\n) ||\n'&sortDirection=' || sortDirection\n",
+    "~'https://sampleapi.com/api/maps?' ||\n'query=' || encodeURIComponent(query) ||\n'&limit=' || pageSize ||\n'&offset=' || ((page - 1) * pageSize) ||\n'&sort=' ||\ncase(\n  sortBy,\n  ['uploadedAt', 'title', 'artist', 'uploadedBy', 'downloads'],\n  ['submissionDate', 'title', 'artist', 'author', 'downloadCount']\n) ||\n'&sortDirection=' || sortDirection\n",
   response: {
     songs_array: "~response.maps",
     serializer: "msgpackr",
