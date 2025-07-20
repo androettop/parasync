@@ -1,3 +1,5 @@
+// Player engine types
+
 export type RecordingMetadata = {
   title: string;
   description: string;
@@ -33,6 +35,7 @@ export type BPMEventData = {
 
 /**
  * Legacy song data type used in the player
+ *
  * TODO: Unify this with the Song type
  */
 export type SongData = {
@@ -48,8 +51,7 @@ export type SongData = {
   folderHandle?: FileSystemDirectoryHandle;
 };
 
-// React types
-
+// Webapp types
 export type SortDirection = "asc" | "desc";
 
 export type Difficulty = "easy" | "medium" | "hard" | "expert";

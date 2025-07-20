@@ -20,12 +20,34 @@ import SongCard from "../../components/SongCard/SongCard";
 import { Song, SortDirection } from "../../types/songs";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+import { RepoConfig } from "../../types/api";
+import { SongRepository } from "../../utils/api";
 
 const PAGE_SIZE = 40;
 
-const searchSongs = (..._a: any[]): Song[] => {
-  throw new Error("searchSong function not implemented");
+const config: RepoConfig = {
+  name: "SampleAPI",
+  search_url:
+    "~'https://sampleapi.com/api/maps?' ||\n'query=' || encodeURIComponent(query) ||\n'&limit=' || pageSize ||\n'&offset=' || ((page - 1) * pageSize) ||\n'&sort=' || case(\n  sortBy,\n  ['artist', 'title', 'duration'],\n  ['author', 'name', 'length'],\n  'submissionDate'\n) ||\n'&sortDirection=' || sortDirection\n",
+  response: {
+    songs_array: "~response.maps",
+    serializer: "msgpackr",
+    fields: {
+      id: "~song.id",
+      uploadedAt: "~song.submissionDate",
+      uploadedBy: "~song.author",
+      title: "~song.title",
+      artist: "~song.artist",
+      downloads: "~song.downloadCount",
+      coverUrl:
+        "~'https://sampleapi.com/covers/' || song.id || '/' || song.albumArt",
+      difficulties:
+        "~\nmap(\n  caseFn(\n    ['Easy','Medium', 'Hard', 'Expert'],\n    ['easy', 'medium', 'hard','expert'],\n    'easy'\n  ),\n  map(\n    getFn('difficultyName'),\n    song.difficulties\n  )\n)\n",
+    },
+  },
 };
+
+const repo = new SongRepository(config);
 
 const SongsPage = () => {
   const [songs, setSongs] = useState<Song[]>([]);
@@ -35,7 +57,7 @@ const SongsPage = () => {
 
   // Search states
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState("submissionDate");
+  const [sortBy, setSortBy] = useState<keyof Song>("uploadedAt");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -51,7 +73,7 @@ const SongsPage = () => {
 
   const handleSearch = async (
     _searchTerm: string = "",
-    sortBy: string = "submissionDate",
+    sortBy: keyof Song = "uploadedAt",
     sortByDirection: SortDirection = "desc",
     page = 1,
   ) => {
@@ -63,13 +85,13 @@ const SongsPage = () => {
     try {
       setCurrentPage(page);
 
-      const songs = await searchSongs(
-        searchTerm,
+      const songs = await repo.search({
+        query: searchTerm,
         page,
+        pageSize: PAGE_SIZE,
         sortBy,
-        sortByDirection,
-        PAGE_SIZE,
-      );
+        sortDirection: sortByDirection,
+      });
       if (page !== 1) {
         setSongs((prev) => [...prev, ...songs]);
       } else {
@@ -177,11 +199,11 @@ const SongsPage = () => {
                       disableScrollLock: true,
                     }}
                   >
-                    <MenuItem value="submissionDate">Upload date</MenuItem>
+                    <MenuItem value="uploadedAt">Upload date</MenuItem>
                     <MenuItem value="title">Title</MenuItem>
                     <MenuItem value="artist">Artist</MenuItem>
-                    <MenuItem value="author">Mapper</MenuItem>
-                    <MenuItem value="downloadCount">Downloads</MenuItem>
+                    <MenuItem value="uploadedBy">Mapper</MenuItem>
+                    <MenuItem value="downloads">Downloads</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
