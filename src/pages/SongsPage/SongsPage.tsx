@@ -125,11 +125,6 @@ const SongsPage = () => {
     // TODO: Implement download logic
   };
 
-  const handlePlay = (songId: string) => {
-    console.log("Playing song:", songId);
-    // Song play logic would go here
-  };
-
   const handleSortDirectionToggle = () => {
     const newSortDirection = sortDirection === "asc" ? "desc" : "asc";
     setSortDirection(newSortDirection);

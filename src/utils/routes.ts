@@ -3,15 +3,14 @@ import {
   MusicNote as MusicNoteIcon,
   Settings as SettingsIcon,
 } from "@mui/icons-material";
-import AboutPage from "../pages/AboutPage/AboutPage";
-import NotFoundPage from "../pages/NotFoundPage/NotFoundPage";
-import SettingsPage from "../pages/SettingsPage/SettingsPage";
 import DownloadIcon from "@mui/icons-material/Download";
-import DebugIcon from "@mui/icons-material/BugReport";
+import AboutPage from "../pages/AboutPage/AboutPage";
+import MySongsPage from "../pages/MySongsPage/MySongsPage";
+import NotFoundPage from "../pages/NotFoundPage/NotFoundPage";
+import PlayerPage from "../pages/PlayerPage/PlayerPage";
+import SettingsPage from "../pages/SettingsPage/SettingsPage";
 import SongsPage from "../pages/SongsPage/SongsPage";
 import { Route } from "../types/routes";
-import MySongsPage from "../pages/MySongsPage/MySongsPage";
-import PlayerPage from "../pages/PlayerPage/PlayerPage";
 
 export const notFoundRoute: Route = {
   label: "Not Found",
