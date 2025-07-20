@@ -1,4 +1,7 @@
 import { DownloadState } from "../types/songs";
+export const PAGE_SIZE = 20;
+
+export const CARD_SIZE = { xs: 6, sm: 4, md: 4, lg: 3, xl: 2 };
 
 export const getDifficultyColor = (difficulty: string) => {
   const lowerDiff = difficulty?.toLowerCase();
