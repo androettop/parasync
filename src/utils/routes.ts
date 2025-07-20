@@ -1,10 +1,8 @@
 import {
-  Info as InfoIcon,
   MusicNote as MusicNoteIcon,
   Settings as SettingsIcon,
 } from "@mui/icons-material";
 import DownloadIcon from "@mui/icons-material/Download";
-import AboutPage from "../pages/AboutPage/AboutPage";
 import MySongsPage from "../pages/MySongsPage/MySongsPage";
 import NotFoundPage from "../pages/NotFoundPage/NotFoundPage";
 import PlayerPage from "../pages/PlayerPage/PlayerPage";
@@ -41,13 +39,6 @@ export const routes: Route[] = [
     path: "/settings",
     PageComponent: SettingsPage,
     Icon: SettingsIcon,
-  },
-  {
-    label: "About",
-    name: "about",
-    path: "/about",
-    PageComponent: AboutPage,
-    Icon: InfoIcon,
   },
   {
     label: "Player",
