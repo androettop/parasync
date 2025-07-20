@@ -2,8 +2,9 @@ import { Box, Button, Grid, Link, Paper, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { Link as RRLink } from "react-router";
 import SongCard from "../../components/SongCard/SongCard";
-import { Song } from "../../types/songs";
+import { LocalSong } from "../../types/songs";
 import {
+  getLocalSongs,
   getStoredDirectoryHandle,
   hasSongsFolderPermissions,
   isFileSystemAccessSupported,
@@ -12,7 +13,7 @@ import {
 import { CARD_SIZE } from "../../utils/songs";
 
 const MySongs = () => {
-  const [songs, setSongs] = useState<Song[]>([]);
+  const [songs, setSongs] = useState<LocalSong[]>([]);
   const [hasFSPermissions, setHasFSPermissions] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState(true);
   const unsupportedBrowser = !isFileSystemAccessSupported();
@@ -28,6 +29,8 @@ const MySongs = () => {
           const storedHandle = await getStoredDirectoryHandle();
           if (storedHandle) {
             setHasFSPermissions(true);
+            const songs = await getLocalSongs(storedHandle);
+            setSongs(songs);
           }
         }
       } catch (error) {
@@ -40,9 +43,9 @@ const MySongs = () => {
     checkPermissions();
   }, []);
 
-  const handlePlay = (songId: string) => {
+  const handlePlay = (song: LocalSong) => {
     // Logic to play the song
-    console.log(`Playing song with ID: ${songId}`);
+    console.log(`Playing song with ID: ${song.song.id}`);
   };
 
   const handleSelectSongsFolder = async () => {
@@ -51,6 +54,8 @@ const MySongs = () => {
       const selectedHandle = await selectSongsFolder();
       if (selectedHandle) {
         setHasFSPermissions(true);
+        const songs = await getLocalSongs(selectedHandle);
+        setSongs(songs);
       }
     } catch (error) {
       console.error("Failed to select songs folder:", error);
@@ -116,16 +121,16 @@ const MySongs = () => {
           ) : (
             <Grid container spacing={2}>
               {songs.length > 0 ? (
-                songs.map((song) => (
-                  <Grid key={song.id} size={CARD_SIZE}>
+                songs.map((localSong) => (
+                  <Grid key={localSong.song.id} size={CARD_SIZE}>
                     <SongCard
-                      title={song.title}
-                      artist={song.artist}
-                      coverImage={song.coverUrl || ""}
-                      difficulties={song.difficulties}
+                      title={localSong.song.title}
+                      artist={localSong.song.artist}
+                      coverImage={localSong.song.coverUrl || ""}
+                      difficulties={localSong.song.difficulties}
                       downloadState={"downloaded"}
-                      onPlay={() => handlePlay(song.id)}
-                      downloads={song.downloads || 0}
+                      onPlay={() => handlePlay(localSong)}
+                      downloads={localSong.song.downloads || 0}
                     />
                   </Grid>
                 ))

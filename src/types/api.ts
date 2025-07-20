@@ -1,6 +1,7 @@
 import { Song } from "./songs";
 
 export type RepoConfig = {
+  display_name: string;
   name: string;
   search_url: string;
   headers?: Record<string, string>[];

@@ -1,4 +1,5 @@
-name: SampleAPI
+display_name: SampleAPI
+name: sampleapi
 
 search_url: |
   ~'https://sampleapi.com/api/maps?' ||
@@ -28,13 +29,6 @@ response:
     difficulties: |
       ~
       map(
-        caseFn(
-          ['Easy','Medium', 'Hard', 'Expert'],
-          ['easy', 'medium', 'hard','expert'],
-          'easy'
-        ),
-        map(
-          getFn('difficultyName'),
-          song.difficulties
-        )
+        getFn('difficultyName'),
+        song.difficulties
       )

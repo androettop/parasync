@@ -1,18 +1,17 @@
-import { DownloadState } from "../types/songs";
+import { Difficulty, DownloadState } from "../types/songs";
 export const PAGE_SIZE = 20;
 
 export const CARD_SIZE = { xs: 6, sm: 4, md: 4, lg: 3, xl: 2 };
 
-export const getDifficultyColor = (difficulty: string) => {
-  const lowerDiff = difficulty?.toLowerCase();
-  switch (lowerDiff) {
-    case "easy":
+export const getDifficultyColor = (difficulty: Difficulty) => {
+  switch (difficulty) {
+    case "Easy":
       return "success";
-    case "medium":
+    case "Medium":
       return "secondary";
-    case "hard":
+    case "Hard":
       return "warning";
-    case "expert":
+    case "Expert":
       return "error";
     default:
       return "info";
