@@ -1,13 +1,13 @@
 import { Box, Typography } from "@mui/material";
 
-const DownloadsPage = () => {
+const MySongs = () => {
   return (
     <Box>
       <Typography variant="h4" color="textPrimary">
-        DownloadsPage
+        MySongs
       </Typography>
     </Box>
   );
 };
 
-export default DownloadsPage;
+export default MySongs;

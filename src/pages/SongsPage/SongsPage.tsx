@@ -164,7 +164,7 @@ const SongsPage = () => {
                 <TextField
                   fullWidth
                   size="small"
-                  placeholder="Search songs or artists..."
+                  placeholder="Search songs or artists and press enter..."
                   value={searchQuery}
                   onChange={handleSearchChange}
                   onKeyUp={(e) => {
