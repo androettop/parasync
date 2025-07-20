@@ -14,45 +14,24 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link as RRLink } from "react-router";
 import SongCard from "../../components/SongCard/SongCard";
 import { Song, SortDirection } from "../../types/songs";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
-import { RepoConfig } from "../../types/api";
+import { RepoConfig, SearchParams } from "../../types/api";
 import { SongRepository } from "../../utils/api";
 import { CARD_SIZE, PAGE_SIZE } from "../../utils/songs";
-
-const config: RepoConfig = {
-  name: "ParaDB (api 2025-03-03)",
-  search_url:
-    "~'https://paradb.net/api/maps?' ||\n'query=' || encodeURIComponent(query) ||\n'&limit=' || pageSize ||\n'&offset=' || ((page - 1) * pageSize) ||\n'&sort=' ||\ncase(\n  sortBy,\n  ['uploadedAt', 'title', 'artist', 'uploadedBy', 'downloads'],\n  ['submissionDate', 'title', 'artist', 'author', 'downloadCount']\n) ||\n'&sortDirection=' || sortDirection\n",
-  response: {
-    songs_array: "~response.maps",
-    serializer: "msgpackr",
-    fields: {
-      id: "~song.id",
-      uploadedAt: "~song.submissionDate",
-      uploadedBy: "~song.author",
-      title: "~song.title",
-      artist: "~song.artist",
-      downloads: "~song.downloadCount",
-      coverUrl:
-        "~'https://paradb.net/covers/' || song.id || '/' || song.albumArt",
-      difficulties:
-        "~\nmap(\n  caseFn(\n    ['Easy','Medium', 'Hard', 'Expert'],\n    ['easy', 'medium', 'hard','expert'],\n    'easy'\n  ),\n  map(\n    getFn('difficultyName'),\n    song.difficulties\n  )\n)\n",
-    },
-  },
-};
-
-const repo = new SongRepository(config);
+import { useLocalStorage } from "../../hooks/useLocalStorage";
 
 const SongsPage = () => {
   const [songs, setSongs] = useState<Song[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [repoConfig] = useLocalStorage<RepoConfig | null>("yaml-config", null);
+  const repoRef = useRef<SongRepository | null>(null);
 
   // Search states
   const [searchQuery, setSearchQuery] = useState("");
@@ -60,36 +39,51 @@ const SongsPage = () => {
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Load initial songs
+  // Initialize repository
   useEffect(() => {
-    handleSearch();
-  }, []);
+    if (repoConfig) {
+      repoRef.current = new SongRepository(repoConfig);
+      handleSearch({
+        query: searchQuery,
+        page: 1,
+        pageSize: PAGE_SIZE,
+        sortBy,
+        sortDirection,
+      });
+    } else {
+      setError(
+        "No repository configuration found. Please set up your repositories in the settings.",
+      );
+    }
+  }, [repoConfig]);
 
   // Handlers
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(event.target.value);
   };
 
-  const handleSearch = async (
-    _searchTerm: string = "",
-    sortBy: keyof Song = "uploadedAt",
-    sortByDirection: SortDirection = "desc",
-    page = 1,
-  ) => {
-    if (isLoading) return; // Prevent multiple concurrent searches
-    const searchTerm = _searchTerm.trim();
+  const handleSearch = async ({
+    query,
+    page,
+    pageSize,
+    sortBy,
+    sortDirection,
+  }: SearchParams) => {
+    // Prevent multiple concurrent searches
+    if (!repoRef.current || repoRef.current.isLoading) return;
+    if (isLoading) return;
 
     setIsLoading(true);
     setError(null);
     try {
       setCurrentPage(page);
 
-      const songs = await repo.search({
-        query: searchTerm,
+      const songs = await repoRef.current.search({
+        query: query.trim(),
         page,
-        pageSize: PAGE_SIZE,
+        pageSize,
         sortBy,
-        sortDirection: sortByDirection,
+        sortDirection,
       });
       if (page !== 1) {
         setSongs((prev) => [...prev, ...songs]);
@@ -106,14 +100,25 @@ const SongsPage = () => {
   };
 
   const loadMoreSongs = async () => {
-    if (isLoading || !hasMore) return;
-    handleSearch(searchQuery, sortBy, sortDirection, currentPage + 1);
+    handleSearch({
+      query: searchQuery,
+      page: currentPage + 1,
+      pageSize: PAGE_SIZE,
+      sortBy,
+      sortDirection,
+    });
   };
 
   const handleSortChange = (event: any) => {
     const newSortBy = event.target.value;
     setSortBy(newSortBy);
-    handleSearch(searchQuery, newSortBy, sortDirection, 1);
+    handleSearch({
+      query: searchQuery,
+      page: 1,
+      pageSize: PAGE_SIZE,
+      sortBy: newSortBy,
+      sortDirection,
+    });
   };
 
   const handleDownload = (_songId: string) => {
@@ -128,7 +133,13 @@ const SongsPage = () => {
   const handleSortDirectionToggle = () => {
     const newSortDirection = sortDirection === "asc" ? "desc" : "asc";
     setSortDirection(newSortDirection);
-    handleSearch(searchQuery, sortBy, newSortDirection, 1);
+    handleSearch({
+      query: searchQuery,
+      page: 1,
+      pageSize: PAGE_SIZE,
+      sortBy,
+      sortDirection: newSortDirection,
+    });
   };
 
   return (
@@ -166,7 +177,13 @@ const SongsPage = () => {
                   onChange={handleSearchChange}
                   onKeyUp={(e) => {
                     if (e.key === "Enter") {
-                      handleSearch(searchQuery, sortBy);
+                      handleSearch({
+                        query: searchQuery,
+                        page: 1,
+                        pageSize: PAGE_SIZE,
+                        sortBy,
+                        sortDirection,
+                      });
                     }
                   }}
                   variant="outlined"
@@ -234,71 +251,73 @@ const SongsPage = () => {
                   !error &&
                   songs.length > 1 &&
                   `${songs.length} songs found`}
-                {!isLoading && error && `Error: ${error}`}
+                {!isLoading && error && `${error}`}
               </Typography>
             </Box>
           </Paper>
         </Grid>
 
         {/* Results */}
-        <Grid size={12}>
-          <Grid container spacing={2}>
-            {isLoading && currentPage === 1 ? (
-              // Skeleton loading
-              Array.from({ length: PAGE_SIZE }).map((_, index) => (
-                <Grid key={index} size={CARD_SIZE}>
-                  <SongCard isLoading />
+        {!error && (
+          <Grid size={12}>
+            <Grid container spacing={2}>
+              {isLoading && currentPage === 1 ? (
+                // Skeleton loading
+                Array.from({ length: PAGE_SIZE }).map((_, index) => (
+                  <Grid key={index} size={CARD_SIZE}>
+                    <SongCard isLoading />
+                  </Grid>
+                ))
+              ) : songs.length > 0 ? (
+                songs.map((song) => (
+                  <Grid key={song.id} size={CARD_SIZE}>
+                    <SongCard
+                      title={song.title}
+                      artist={song.artist}
+                      coverImage={song.coverUrl || ""}
+                      difficulties={song.difficulties}
+                      downloadState={"not-downloaded"}
+                      onDownload={() => handleDownload(song.id)}
+                      onPlay={() => handlePlay(song.id)}
+                      downloads={song.downloads || 0}
+                    />
+                  </Grid>
+                ))
+              ) : (
+                // No results
+                <Grid size={12}>
+                  <Paper sx={{ p: 4, textAlign: "center" }}>
+                    <Typography variant="h6" gutterBottom>
+                      No songs found
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Try changing your search terms or adjusting the filters
+                    </Typography>
+                  </Paper>
                 </Grid>
-              ))
-            ) : songs.length > 0 ? (
-              songs.map((song) => (
-                <Grid key={song.id} size={CARD_SIZE}>
-                  <SongCard
-                    title={song.title}
-                    artist={song.artist}
-                    coverImage={song.coverUrl || ""}
-                    difficulties={song.difficulties}
-                    downloadState={"not-downloaded"}
-                    onDownload={() => handleDownload(song.id)}
-                    onPlay={() => handlePlay(song.id)}
-                    downloads={song.downloads || 0}
-                  />
-                </Grid>
-              ))
-            ) : (
-              // No results
-              <Grid size={12}>
-                <Paper sx={{ p: 4, textAlign: "center" }}>
-                  <Typography variant="h6" gutterBottom>
-                    No songs found
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Try changing your search terms or adjusting the filters
-                  </Typography>
-                </Paper>
-              </Grid>
-            )}
+              )}
 
-            {hasMore && (
-              <Grid size={12}>
-                <Button
-                  sx={{
-                    p: 2,
-                    textAlign: "center",
-                    cursor: "pointer",
-                  }}
-                  disabled={isLoading}
-                  loading={isLoading}
-                  fullWidth
-                  variant="outlined"
-                  onClick={loadMoreSongs}
-                >
-                  Load more songs
-                </Button>
-              </Grid>
-            )}
+              {hasMore && (
+                <Grid size={12}>
+                  <Button
+                    sx={{
+                      p: 2,
+                      textAlign: "center",
+                      cursor: "pointer",
+                    }}
+                    disabled={isLoading}
+                    loading={isLoading}
+                    fullWidth
+                    variant="outlined"
+                    onClick={loadMoreSongs}
+                  >
+                    Load more songs
+                  </Button>
+                </Grid>
+              )}
+            </Grid>
           </Grid>
-        </Grid>
+        )}
       </Grid>
     </Box>
   );

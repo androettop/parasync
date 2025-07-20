@@ -8,8 +8,8 @@ search_url: |
   '&sort=' || 
   case(
     sortBy,
-    ['uploadedAt', 'title', 'artist', 'uploadedBy', 'downloads']
-    ['submissionDate', 'title', 'artist', 'author', 'downloadCount'],
+    ['uploadedAt', 'title', 'artist', 'uploadedBy', 'downloads'],
+    ['submissionDate', 'title', 'artist', 'author', 'downloadCount']
   ) ||
   '&sortDirection=' || sortDirection
 
