@@ -28,7 +28,7 @@ const PAGE_SIZE = 40;
 const config: RepoConfig = {
   name: "ParaDB (api 2025-03-03)",
   search_url:
-    "~'https://paradb.net/api/maps?' ||\n'query=' || encodeURIComponent(query) ||\n'&limit=' || pageSize ||\n'&offset=' || ((page - 1) * pageSize) ||\n'&sort=' || case(\n  sortBy,\n  ['artist', 'title', 'duration'],\n  ['author', 'name', 'length'],\n  'submissionDate'\n) ||\n'&sortDirection=' || sortDirection\n",
+    "~'https://paradb.net/api/maps?' ||\n'query=' || encodeURIComponent(query) ||\n'&limit=' || pageSize ||\n'&offset=' || ((page - 1) * pageSize) ||\n'&sort=' ||\ncase(\n  sortBy,\n  ['uploadedAt', 'title', 'artist', 'uploadedBy', 'downloads'],\n  ['submissionDate', 'title', 'artist', 'author', 'downloadCount']\n) ||\n'&sortDirection=' || sortDirection\n",
   response: {
     songs_array: "~response.maps",
     serializer: "msgpackr",

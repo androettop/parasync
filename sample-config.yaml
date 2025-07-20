@@ -5,11 +5,11 @@ search_url: |
   'query=' || encodeURIComponent(query) ||
   '&limit=' || pageSize ||
   '&offset=' || ((page - 1) * pageSize) ||
-  '&sort=' || case(
+  '&sort=' || 
+  case(
     sortBy,
-    ['artist', 'title', 'duration'],
-    ['author', 'name', 'length'],
-    'submissionDate'
+    ['uploadedAt', 'title', 'artist', 'uploadedBy', 'downloads']
+    ['submissionDate', 'title', 'artist', 'author', 'downloadCount'],
   ) ||
   '&sortDirection=' || sortDirection
 
