@@ -278,7 +278,6 @@ const SongsPage = () => {
                       difficulties={song.difficulties}
                       downloadState={"not-downloaded"}
                       onDownload={() => handleDownload(song.id)}
-                      onPlay={() => handlePlay(song.id)}
                       downloads={song.downloads || 0}
                     />
                   </Grid>
