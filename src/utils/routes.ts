@@ -11,7 +11,6 @@ import DebugIcon from "@mui/icons-material/BugReport";
 import SongsPage from "../pages/SongsPage/SongsPage";
 import { Route } from "../types/routes";
 import MySongsPage from "../pages/MySongsPage/MySongsPage";
-import App from "../App";
 import PlayerPage from "../pages/PlayerPage/PlayerPage";
 
 export const notFoundRoute: Route = {
@@ -43,13 +42,6 @@ export const routes: Route[] = [
     path: "/settings",
     PageComponent: SettingsPage,
     Icon: SettingsIcon,
-  },
-  {
-    label: "Old ui",
-    name: "old-ui",
-    path: "/old-ui",
-    PageComponent: App,
-    Icon: DebugIcon,
   },
   {
     label: "About",
