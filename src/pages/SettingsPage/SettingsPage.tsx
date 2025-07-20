@@ -51,25 +51,6 @@ const SettingsPage = () => {
     }
   };
 
-  const handleClear = () => {
-    setYamlText("");
-    setSavedConfig(null);
-    setParseError(null);
-    setSuccessMessage(null);
-  };
-
-  const handleLoadSample = async () => {
-    try {
-      const response = await fetch("/sample-config.yaml");
-      const sampleYaml = await response.text();
-      setYamlText(sampleYaml);
-      setParseError(null);
-      setSuccessMessage(null);
-    } catch (error) {
-      setParseError("Could not load example configuration");
-    }
-  };
-
   return (
     <Box>
       <Grid container spacing={3}>
@@ -93,20 +74,6 @@ const SettingsPage = () => {
             </Typography>
 
             <Stack spacing={2}>
-              {/* Buttons */}
-              <Stack direction="row" spacing={2}>
-                <Button variant="outlined" onClick={handleLoadSample}>
-                  Load Example
-                </Button>
-                <Button
-                  variant="outlined"
-                  color="secondary"
-                  onClick={handleClear}
-                >
-                  Clear
-                </Button>
-              </Stack>
-
               {/* Text Area */}
               <Editor
                 defaultLanguage="yaml"
