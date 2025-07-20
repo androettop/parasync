@@ -17,18 +17,18 @@ import {
 import { useEffect, useState } from "react";
 import { Link as RRLink } from "react-router";
 import SongCard from "../../components/SongCard/SongCard";
-import { APISearchResponse, APISong, SortDirection } from "../../types/songs";
+import { Song, SortDirection } from "../../types/songs";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 
 const PAGE_SIZE = 40;
 
-const searchSongs = () => {
+const searchSongs = (..._a: any[]): Song[] => {
   throw new Error("searchSong function not implemented");
 };
 
 const SongsPage = () => {
-  const [songs, setSongs] = useState<APISong[]>([]);
+  const [songs, setSongs] = useState<Song[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +63,7 @@ const SongsPage = () => {
     try {
       setCurrentPage(page);
 
-      const response: APISearchResponse = await searchSongs(
+      const songs = await searchSongs(
         searchTerm,
         page,
         sortBy,
@@ -71,11 +71,12 @@ const SongsPage = () => {
         PAGE_SIZE,
       );
       if (page !== 1) {
-        setSongs((prev) => [...prev, ...response.data]);
+        setSongs((prev) => [...prev, ...songs]);
       } else {
-        setSongs(response.data);
+        setSongs(songs);
       }
-      setHasMore(response.pagination.hasMore);
+      // Not perfect, but i'm lazy
+      setHasMore(songs.length === PAGE_SIZE);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to search songs");
     } finally {
@@ -94,7 +95,7 @@ const SongsPage = () => {
     handleSearch(searchQuery, newSortBy, sortDirection, 1);
   };
 
-  const handleDownload = (songId: string) => {
+  const handleDownload = (_songId: string) => {
     // TODO: Implement download logic
   };
 
@@ -236,12 +237,12 @@ const SongsPage = () => {
                   <SongCard
                     title={song.title}
                     artist={song.artist}
-                    coverImage={song.albumArt || ""}
+                    coverImage={song.coverUrl || ""}
                     difficulties={song.difficulties}
                     downloadState={"not-downloaded"}
                     onDownload={() => handleDownload(song.id)}
                     onPlay={() => handlePlay(song.id)}
-                    downloads={song.downloadCount || 0}
+                    downloads={song.downloads || 0}
                   />
                 </Grid>
               ))

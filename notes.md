@@ -91,7 +91,7 @@ headers:
   - Accept: "application/json"
 
 response:
-  data_path: "maps"
+  songs_array: "~response.maps"
   serializer: "none"
 
   fields:
