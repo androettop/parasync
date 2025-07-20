@@ -12,7 +12,7 @@ import DownloadIcon from "@mui/icons-material/Download";
 import DebugIcon from "@mui/icons-material/BugReport";
 import SongsPage from "../pages/SongsPage/SongsPage";
 import { Route } from "../types/routes";
-import DownloadsPage from "../pages/DownloadsPage/DownloadsPage";
+import MySongs from "../pages/MySongs/MySongs";
 import App from "../App";
 
 export const notFoundRoute: Route = {
@@ -32,18 +32,18 @@ export const routes: Route[] = [
     Icon: DashboardIcon,
   },
   {
-    label: "Songs",
+    label: "My Songs",
+    name: "mysongs",
+    path: "/mysongs",
+    PageComponent: MySongs,
+    Icon: DownloadIcon,
+  },
+  {
+    label: "Songs Library",
     name: "songs",
     path: "/songs",
     PageComponent: SongsPage,
     Icon: MusicNoteIcon,
-  },
-  {
-    label: "Downloads",
-    name: "downloads",
-    path: "/downloads",
-    PageComponent: DownloadsPage,
-    Icon: DownloadIcon,
   },
   {
     label: "Settings",
