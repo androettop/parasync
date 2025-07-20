@@ -22,8 +22,7 @@ import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import { RepoConfig } from "../../types/api";
 import { SongRepository } from "../../utils/api";
-
-const PAGE_SIZE = 40;
+import { CARD_SIZE, PAGE_SIZE } from "../../utils/songs";
 
 const config: RepoConfig = {
   name: "ParaDB (api 2025-03-03)",
@@ -131,8 +130,6 @@ const SongsPage = () => {
     setSortDirection(newSortDirection);
     handleSearch(searchQuery, sortBy, newSortDirection, 1);
   };
-
-  const cardSize = { xs: 6, sm: 4, md: 4, lg: 3, xl: 2 };
 
   return (
     <Box>
@@ -249,13 +246,13 @@ const SongsPage = () => {
             {isLoading && currentPage === 1 ? (
               // Skeleton loading
               Array.from({ length: PAGE_SIZE }).map((_, index) => (
-                <Grid key={index} size={cardSize}>
+                <Grid key={index} size={CARD_SIZE}>
                   <SongCard isLoading />
                 </Grid>
               ))
             ) : songs.length > 0 ? (
               songs.map((song) => (
-                <Grid key={song.id} size={cardSize}>
+                <Grid key={song.id} size={CARD_SIZE}>
                   <SongCard
                     title={song.title}
                     artist={song.artist}

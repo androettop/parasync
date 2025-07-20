@@ -1,11 +1,9 @@
 import {
-  Dashboard as DashboardIcon,
   Info as InfoIcon,
   MusicNote as MusicNoteIcon,
   Settings as SettingsIcon,
 } from "@mui/icons-material";
 import AboutPage from "../pages/AboutPage/AboutPage";
-import HomePage from "../pages/HomePage/HomePage";
 import NotFoundPage from "../pages/NotFoundPage/NotFoundPage";
 import SettingsPage from "../pages/SettingsPage/SettingsPage";
 import DownloadIcon from "@mui/icons-material/Download";
@@ -25,16 +23,9 @@ export const notFoundRoute: Route = {
 
 export const routes: Route[] = [
   {
-    label: "Home",
-    name: "home",
-    path: "/",
-    PageComponent: HomePage,
-    Icon: DashboardIcon,
-  },
-  {
     label: "My Songs",
     name: "mysongs",
-    path: "/mysongs",
+    path: "/",
     PageComponent: MySongs,
     Icon: DownloadIcon,
   },
