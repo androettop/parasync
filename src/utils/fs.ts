@@ -98,7 +98,7 @@ export const hasSongsFolderPermissions = async (): Promise<boolean> => {
     if (!handle) return false;
 
     // Verify we still have permission to access the directory
-    const permission = await handle.queryPermission({ mode: "read" });
+    const permission = await handle.queryPermission({ mode: "readwrite" });
     return permission === "granted";
   } catch (error) {
     console.error("Error checking permissions:", error);
@@ -141,7 +141,7 @@ export const selectSongsFolder =
     try {
       // Show directory picker
       const directoryHandle = await window.showDirectoryPicker({
-        mode: "read",
+        mode: "readwrite",
         startIn: "documents",
       });
 
