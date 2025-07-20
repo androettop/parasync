@@ -222,7 +222,10 @@ const Layout = () => {
         }}
       >
         {showAppbar && <Toolbar />}
-        <Container maxWidth="xl" sx={{ py: 2 }}>
+        <Container
+          maxWidth="xl"
+          sx={{ py: 2, minHeight: "calc(100vh - 64px)" }}
+        >
           <Outlet />
         </Container>
       </Box>

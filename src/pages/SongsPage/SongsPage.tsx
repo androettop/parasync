@@ -17,12 +17,15 @@ import {
 import { useEffect, useState } from "react";
 import { Link as RRLink } from "react-router";
 import SongCard from "../../components/SongCard/SongCard";
-import { searchSongs } from "../../game/helpers/apiService";
 import { APISearchResponse, APISong, SortDirection } from "../../types/songs";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 
 const PAGE_SIZE = 40;
+
+const searchSongs = () => {
+  throw new Error("searchSong function not implemented");
+};
 
 const SongsPage = () => {
   const [songs, setSongs] = useState<APISong[]>([]);

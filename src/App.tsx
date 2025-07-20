@@ -1,32 +1,36 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import styles from "./App.module.css";
-import { APIConfig } from "./components/APIConfig/APIConfig";
-import GameLoader from "./components/GameLoader/GameLoader";
-import { getAPIConfig, validateAPIUrl } from "./game/helpers/apiService";
+import SmallCover from "./components/SmallCover/SmallCover";
 import { SongData } from "./types/songs";
+import { loadAllSongs } from "./game/helpers/songLoader";
+import GameLoader from "./components/GameLoader/GameLoader";
+import { Box } from "@mui/material";
 
 function App() {
   const [selectedSong, setSelectedSong] = useState<SongData | null>(null);
-  const [showAPIConfig, setShowAPIConfig] = useState<boolean>(false);
-  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
-  const [loading] = useState<boolean>(false);
+  const [songList, setSongList] = useState<SongData[] | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 
-  // Check API configuration on app load
-  useEffect(() => {
-    const checkAPIConfig = async () => {
-      const config = getAPIConfig();
-      const isValid = await validateAPIUrl(config.baseUrl);
-      if (!isValid) {
-        setShowAPIConfig(true);
-      }
-    };
+  const handleSelectSongs = async () => {
+    setLoading(true);
+    setError(null);
 
-    checkAPIConfig();
-  }, []);
-
-  const handleConfigSaved = () => {
-    setShowAPIConfig(false);
+    loadAllSongs()
+      .then((songs) => {
+        setSongList(songs);
+      })
+      .catch((err) => {
+        setError(
+          `Error al cargar las canciones: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   };
 
   const toggleFullscreen = () => {
@@ -39,34 +43,44 @@ function App() {
     }
   };
 
-  const handleExit = () => {
-    setSelectedSong(null);
-    setError(null);
-  };
-
-  const handleOpenAPIConfig = () => {
-    setShowAPIConfig(true);
-  };
-
   return (
-    <>
+    <Box>
       {selectedSong ? (
-        <GameLoader song={selectedSong} onExit={handleExit} />
-      ) : showAPIConfig ? (
-        <APIConfig onConfigSaved={handleConfigSaved} />
+        <GameLoader
+          song={selectedSong}
+          onExit={() => {
+            setSelectedSong(null);
+          }}
+        />
       ) : (
         <div className={styles.container}>
-          <div className={styles.header}>
-            <button
-              onClick={handleOpenAPIConfig}
-              className={styles.configButton}
-            >
-              ⚙️ API Settings
-            </button>
-          </div>
+          <button
+            onClick={handleSelectSongs}
+            disabled={loading}
+            className={styles.selectButton}
+          >
+            {loading ? "Loading..." : "Select songs folder"}
+          </button>
 
-          {loading && (
-            <div className={styles.loadingMessage}>Loading song...</div>
+          {songList ? (
+            <div className={styles.songGrid}>
+              {songList.map((song) => (
+                <SmallCover
+                  key={song.id}
+                  song={song}
+                  onClick={() => {
+                    setSelectedSong(song);
+                  }}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className={styles.noSongsMessage}>
+              There are no songs loaded. Click the button to select a folder.{" "}
+              <br />
+              You can use the same songs as in the{" "}
+              <a href="https://paradiddleapp.com/">Paradiddle VR game </a>
+            </p>
           )}
 
           {error && <div className={styles.errorMessage}>{error}</div>}
@@ -76,7 +90,7 @@ function App() {
       <button onClick={toggleFullscreen} className={styles.fullscreenButton}>
         {isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
       </button>
-    </>
+    </Box>
   );
 }
 
