@@ -10,34 +10,28 @@ interface GameLoaderProps {
 }
 
 const GameLoader = ({ songDirPath, song, onExit }: GameLoaderProps) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<Game | null>(null);
 
   useEffect(() => {
-    if (canvasRef.current && !engineRef.current) {
-      engineRef.current = new Game(
-        canvasRef.current,
-        songDirPath,
-        song,
-        onExit,
-      );
+    if (containerRef.current && !engineRef.current) {
+      console.log("Creating game engine");
+      const canvas = document.createElement("canvas");
+      containerRef.current.append(canvas);
+      engineRef.current = new Game(canvas, songDirPath, song, onExit);
       engineRef.current.initialize();
     }
     const engine = engineRef.current;
 
     return () => {
       if (engine) {
-        engine.stop();
+        engine.dispose();
         engineRef.current = null;
       }
     };
   }, [songDirPath, song]);
 
-  return (
-    <div className={styles["game-container"]}>
-      <canvas ref={canvasRef} />
-    </div>
-  );
+  return <div className={styles["game-container"]} ref={containerRef}></div>;
 };
 
 export default GameLoader;
