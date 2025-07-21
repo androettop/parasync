@@ -14,6 +14,8 @@ Download the latest version [here](https://github.com/androettop/parasync/releas
 
 At the moment the mac os version does not play songs with the ogg format due to webkit limitations, but it still works for syncronizing Paradiddle songs.
 
+iOS, Android & Meta Quest versions will be available soon.
+
 ## 🧩 Features
 
 - ⚡ Drum-focused *Guitar Hero*-like gameplay. 
