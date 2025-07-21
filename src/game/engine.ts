@@ -121,7 +121,6 @@ class Game extends Engine {
   private setupReleaseFilesInterval() {
     // Check if the engine is not running and free resources
     setTimeout(() => {
-      console.log(this);
       if (!this.isRunning()) {
         this.releaseResources();
       } else {

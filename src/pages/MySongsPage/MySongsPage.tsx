@@ -100,7 +100,7 @@ const MySongsPage = () => {
             </Paper>
           ) : (
             <Grid container spacing={2}>
-              {songs.length > 0 ? (
+              {songs?.length ? (
                 songs.map((localSong) => (
                   <Grid key={localSong.baseFileName} size={CARD_SIZE}>
                     {localSong.song ? (

@@ -57,7 +57,7 @@ const SongsPage = () => {
 
   // Initialize repository
   useEffect(() => {
-    if (localSongs.length === 0 || repoRef.current) return;
+    if (localSongs === null || repoRef.current) return;
     if (repoConfig) {
       repoRef.current = new SongRepository(repoConfig);
       handleSearch({
@@ -86,6 +86,7 @@ const SongsPage = () => {
     sortBy,
     sortDirection,
   }: SearchParams) => {
+    console.log(repoRef.current, isLoading);
     // Prevent multiple concurrent searches
     if (!repoRef.current || repoRef.current.isLoading) return;
     if (isLoading) return;
@@ -108,7 +109,7 @@ const SongsPage = () => {
       const songs = onlineSongs.map((song) => {
         const data: { song: Song; localSong?: LocalSong } = {
           song,
-          localSong: localSongs.find((localSong) => {
+          localSong: localSongs?.find((localSong) => {
             if (!repoRef.current) return false;
             const prefix = getSongFolderPrefix(
               song.id,
