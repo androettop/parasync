@@ -8,9 +8,11 @@ It’s fully compatible with songs from the popular VR drumming app [Paradiddle]
 <img width="1586" height="1017" alt="image" src="https://github.com/user-attachments/assets/5851ae22-1de5-4073-b50b-694743f1430e" />
 
 
-## 🎮 Demo
+## 🎮 Download
 
-Try the game live [here](https://parasync.androetto.dev/).
+Download the latest version [here](https://github.com/androettop/parasync/releases).
+
+At the moment the mac os version does not play songs with the ogg format due to webkit limitations, but it still works for syncronizing Paradiddle songs.
 
 ## 🧩 Features
 
