@@ -11,22 +11,6 @@ export const selectSongsDirectory = async () => {
   return file;
 };
 
-export const getLocalSongs = async (
-  songsFolder: string,
-): Promise<LocalSong[]> => {
-  const entries = await readDir(songsFolder);
-  const songs: LocalSong[] = [];
-  for (const entry of entries) {
-    if (entry.isDirectory) {
-      songs.push({
-        folderName: entry.name,
-      });
-    }
-  }
-  console.log(songs);
-  return songs;
-};
-
 export const getImageUrl = async (imagePath: string): Promise<string> => {
   const image = await readFile(imagePath);
   const blob = new Blob([image], { type: "image/png" });
@@ -47,7 +31,6 @@ export const loadSong = async (
       if (!localSong.song && entry.name.endsWith(".rlrr")) {
         const jsonData = await readTextFile(`${songPath}/${entry.name}`);
         const paradiddleSong: ParadiddleSong = JSON.parse(jsonData);
-        console.log(paradiddleSong);
         localSong.song = {
           title: paradiddleSong.recordingMetadata.title,
           artist: paradiddleSong.recordingMetadata.artist,
@@ -74,4 +57,21 @@ export const loadSong = async (
   }
 
   return localSong;
+};
+
+export const getLocalSongs = async (
+  songsFolder: string,
+): Promise<LocalSong[]> => {
+  const entries = await readDir(songsFolder);
+  const songs: LocalSong[] = [];
+  for (const entry of entries) {
+    if (entry.isDirectory) {
+      const localSong: LocalSong = {
+        folderName: entry.name,
+      };
+      await loadSong(songsFolder, localSong);
+      songs.push(localSong);
+    }
+  }
+  return songs;
 };
