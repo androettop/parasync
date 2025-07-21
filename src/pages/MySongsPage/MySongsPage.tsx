@@ -1,48 +1,79 @@
+import FolderOpenIcon from "@mui/icons-material/FolderOpen";
 import { Box, Button, Grid, Link, Paper, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { Link as RRLink, useNavigate } from "react-router";
+import useStaticHandler from "../../components/hooks/useStaticHandler";
 import SongCard from "../../components/SongCard/SongCard";
+import useSongsPath from "../../hooks/useSongsPath";
 import { Difficulty, LocalSong } from "../../types/songs";
-
-import { CARD_SIZE } from "../../utils/songs";
 import { getLocalSongs, loadSong, selectSongsDirectory } from "../../utils/fs";
+import { CARD_SIZE } from "../../utils/songs";
 
 const MySongsPage = () => {
   const [songs, setSongs] = useState<LocalSong[]>([]);
-  const [hasFSPermissions, setHasFSPermissions] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [songsPath, setSongsPath] = useSongsPath();
+
   const navigate = useNavigate();
 
   // Check for existing permissions on component mount
   const handlePlay = async (song: LocalSong, difficulty: Difficulty) => {
     // Logic to play the song
+    console.log("Playing song:", song.song?.title);
+    console.log("Difficulty:", difficulty);
+    navigate("/play?file=");
   };
 
   const handleSelectSongsFolder = async () => {
-    const songsPath = await selectSongsDirectory();
-    if (songsPath) {
-      setHasFSPermissions(true);
-      const songs = await getLocalSongs(songsPath);
-      setSongs(songs);
-      const promises = songs.map((song) => loadSong(songsPath, song));
-      const loadedSongs = await Promise.all(promises);
-      setSongs(loadedSongs);
+    const newSongsPath = await selectSongsDirectory();
+    if (newSongsPath) {
+      setSongsPath(newSongsPath);
     }
   };
+
+  const handleLoadSongs = useStaticHandler(async (songsPath) => {
+    if (songsPath) {
+      const songs = await getLocalSongs(songsPath);
+      setSongs(songs);
+    }
+  });
+
+  useEffect(() => {
+    handleLoadSongs(songsPath);
+  }, [handleLoadSongs, songsPath]);
 
   return (
     <Box>
       <Grid container spacing={3}>
         {/* Header */}
         <Grid size={12}>
-          <Typography
-            variant="h4"
-            component="h1"
-            gutterBottom
-            color="textPrimary"
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              flexDirection: "row",
+            }}
           >
-            My Songs
-          </Typography>
+            <Typography
+              variant="h4"
+              component="h1"
+              gutterBottom
+              color="textPrimary"
+            >
+              My Songs
+            </Typography>
+            <Box>
+              {/* Choose songs folder button */}
+              <Button
+                variant="outlined"
+                color="primary"
+                startIcon={<FolderOpenIcon />}
+                onClick={handleSelectSongsFolder}
+              >
+                Choose Songs Folder
+              </Button>
+            </Box>
+          </Box>
+
           <Typography variant="subtitle1" color="text.secondary">
             Here you can manage your song library, view your downloaded songs,
             and play them directly in the app.{" "}
@@ -54,12 +85,8 @@ const MySongsPage = () => {
 
         {/* Songs List */}
         <Grid size={12}>
-          {isLoading ? (
-            <Paper sx={{ p: 4, textAlign: "center" }}>
-              <Typography variant="h6">Loading...</Typography>
-            </Paper>
-          ) : !hasFSPermissions ? (
-            // Request permissions to access songs folder
+          {!songsPath ? (
+            // Request songs folder selection
             <Paper sx={{ p: 4, textAlign: "center" }}>
               <Typography variant="h6" gutterBottom>
                 Select Your Songs Folder
