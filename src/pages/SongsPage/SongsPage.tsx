@@ -17,19 +17,28 @@ import {
   Typography,
 } from "@mui/material";
 import { useEffect, useRef, useState } from "react";
-import { Link as RRLink } from "react-router";
+import { Link as RRLink, useNavigate } from "react-router";
 import SongCard from "../../components/SongCard/SongCard";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
 import { RepoConfig, SearchParams } from "../../types/api";
-import { DownloadState, Song, SortDirection } from "../../types/songs";
+import {
+  Difficulty,
+  DownloadState,
+  LocalSong,
+  Song,
+  SortDirection,
+} from "../../types/songs";
 import { SongRepository } from "../../utils/api";
 import { CARD_SIZE, PAGE_SIZE } from "../../utils/songs";
-import { unzipSong } from "../../utils/fs";
+import { getSongFolderPrefix, unzipSong } from "../../utils/fs";
 import useSongsPath from "../../hooks/useSongsPath";
+import useLocalSongs from "../../hooks/useLocalSongs";
 
 const SongsPage = () => {
   const [songsPath] = useSongsPath();
-  const [songs, setSongs] = useState<Song[]>([]);
+  const [songs, setSongs] = useState<{ song: Song; localSong?: LocalSong }[]>(
+    [],
+  );
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +47,8 @@ const SongsPage = () => {
   const [songsDownloadStates, setSongsDownloadStates] = useState<
     Record<string, DownloadState>
   >({});
-
+  const localSongs = useLocalSongs();
+  const navigate = useNavigate();
   // Search states
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<keyof Song>("uploadedAt");
@@ -47,6 +57,7 @@ const SongsPage = () => {
 
   // Initialize repository
   useEffect(() => {
+    if (localSongs.length === 0 || repoRef.current) return;
     if (repoConfig) {
       repoRef.current = new SongRepository(repoConfig);
       handleSearch({
@@ -61,7 +72,7 @@ const SongsPage = () => {
         "No repository configuration found. Please set up your repositories in the settings.",
       );
     }
-  }, [repoConfig]);
+  }, [repoConfig, localSongs]);
 
   // Handlers
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -84,13 +95,33 @@ const SongsPage = () => {
     try {
       setCurrentPage(page);
 
-      const songs = await repoRef.current.search({
+      const onlineSongs = await repoRef.current.search({
         query: query.trim(),
         page,
         pageSize,
         sortBy,
         sortDirection,
       });
+
+      // format and add localsongs if available
+
+      const songs = onlineSongs.map((song) => {
+        const data: { song: Song; localSong?: LocalSong } = {
+          song,
+          localSong: localSongs.find((localSong) => {
+            if (!repoRef.current) return false;
+            const prefix = getSongFolderPrefix(
+              song.id,
+              repoRef.current.config.name,
+            );
+            const isLocal = localSong.baseFileName.startsWith(prefix);
+            console.log(localSong.baseFileName, prefix, isLocal);
+            return isLocal;
+          }),
+        };
+        return data;
+      });
+
       if (page !== 1) {
         setSongs((prev) => [...prev, ...songs]);
       } else {
@@ -139,6 +170,12 @@ const SongsPage = () => {
     } finally {
       setSongsDownloadStates((prev) => ({ ...prev, [song.id]: "downloaded" }));
     }
+  };
+
+  const handlePlay = async (localSong: LocalSong, difficulty: Difficulty) => {
+    const fileName = `${localSong.baseFileName}_${difficulty}.rlrr`;
+    const playerUrl = `/play?file=${encodeURIComponent(fileName)}`;
+    navigate(playerUrl);
   };
 
   const handleSortDirectionToggle = () => {
@@ -280,21 +317,35 @@ const SongsPage = () => {
                   </Grid>
                 ))
               ) : songs.length > 0 ? (
-                songs.map((song) => (
-                  <Grid key={song.id} size={CARD_SIZE}>
-                    <SongCard
-                      title={song.title}
-                      artist={song.artist}
-                      coverImage={song.coverUrl || ""}
-                      difficulties={song.difficulties}
-                      downloadState={
-                        songsDownloadStates[song.id] || "not-downloaded"
-                      }
-                      onDownload={() => handleDownload(song)}
-                      downloads={song.downloads || 0}
-                    />
-                  </Grid>
-                ))
+                songs.map((data) => {
+                  return (
+                    <Grid key={data.song.id} size={CARD_SIZE}>
+                      <SongCard
+                        title={data.song.title}
+                        artist={data.song.artist}
+                        coverImage={data.song.coverUrl || ""}
+                        difficulties={data.song.difficulties}
+                        downloadState={
+                          data.localSong
+                            ? "downloaded"
+                            : songsDownloadStates[data.song.id] ||
+                              "not-downloaded"
+                        }
+                        onDownload={() => handleDownload(data.song)}
+                        onPlay={
+                          data.localSong
+                            ? (difficulty) =>
+                                handlePlay(
+                                  data.localSong as LocalSong,
+                                  difficulty,
+                                )
+                            : undefined
+                        }
+                        downloads={data.song.downloads || 0}
+                      />
+                    </Grid>
+                  );
+                })
               ) : (
                 // No results
                 <Grid size={12}>
