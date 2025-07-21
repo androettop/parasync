@@ -1,17 +1,16 @@
 import FolderOpenIcon from "@mui/icons-material/FolderOpen";
 import { Box, Button, Grid, Link, Paper, Typography } from "@mui/material";
-import { useEffect, useState } from "react";
 import { Link as RRLink, useNavigate } from "react-router";
-import useStaticHandler from "../../components/hooks/useStaticHandler";
 import SongCard from "../../components/SongCard/SongCard";
+import useLocalSongs from "../../hooks/useLocalSongs";
 import useSongsPath from "../../hooks/useSongsPath";
 import { Difficulty, LocalSong } from "../../types/songs";
-import { getLocalSongs, selectSongsDirectory } from "../../utils/fs";
+import { selectSongsDirectory } from "../../utils/fs";
 import { CARD_SIZE } from "../../utils/songs";
 
 const MySongsPage = () => {
-  const [songs, setSongs] = useState<LocalSong[]>([]);
   const [songsPath, setSongsPath] = useSongsPath();
+  const songs = useLocalSongs();
 
   const navigate = useNavigate();
 
@@ -28,17 +27,6 @@ const MySongsPage = () => {
       setSongsPath(newSongsPath);
     }
   };
-
-  const handleLoadSongs = useStaticHandler(async (songsPath) => {
-    if (songsPath) {
-      const songs = await getLocalSongs(songsPath);
-      setSongs(songs);
-    }
-  });
-
-  useEffect(() => {
-    handleLoadSongs(songsPath);
-  }, [handleLoadSongs, songsPath]);
 
   return (
     <Box>

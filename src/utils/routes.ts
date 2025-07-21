@@ -32,6 +32,7 @@ export const routes: Route[] = [
     path: "/songs",
     PageComponent: SongsPage,
     Icon: MusicNoteIcon,
+    requiresSongDir: true,
   },
   {
     label: "Settings",

@@ -12,6 +12,7 @@ import { applyBlur } from "./helpers/imageEffects";
 import { ImageFile, MusicFile } from "./helpers/loaders";
 import { createLoader, Resources as NotesResources } from "./resources";
 import MainScene from "./scenes/MainScene";
+import { releaseFileUrl } from "./helpers/filesLoader";
 
 class Game extends Engine {
   song: ParadiddleSong;
@@ -21,6 +22,7 @@ class Game extends Engine {
   cover: ImageSource | null = null;
   coverBg: ImageSource | null = null;
   exitHandler: () => void;
+  releaseFilesTimeout: number = 0;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -113,6 +115,27 @@ class Game extends Engine {
   onInitialize(engine: Engine): void {
     super.onInitialize(engine);
     this.goToScene("main");
+    this.setupReleaseFilesInterval();
+  }
+
+  private setupReleaseFilesInterval() {
+    // Check if the engine is not running and free resources
+    setTimeout(() => {
+      console.log(this);
+      if (!this.isRunning()) {
+        this.releaseResources();
+      } else {
+        this.setupReleaseFilesInterval();
+      }
+    }, 2000);
+  }
+
+  private releaseResources() {
+    console.log("Releasing resources...");
+    releaseFileUrl(this.cover?.data.src);
+    releaseFileUrl(this.coverBg?.data.src);
+    this.songTracks.forEach((songTrack) => releaseFileUrl(songTrack.path));
+    this.drumTracks.forEach((drumTrack) => releaseFileUrl(drumTrack.path));
   }
 }
 

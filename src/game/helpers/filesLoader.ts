@@ -3,7 +3,7 @@ import { readFile } from "@tauri-apps/plugin-fs";
 /**
  * Releases the resources used by a URL object
  */
-export const releaseFileUrl = (url: string | null): void => {
+export const releaseFileUrl = (url?: string): void => {
   if (url) {
     URL.revokeObjectURL(url);
   }
