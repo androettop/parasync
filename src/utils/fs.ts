@@ -18,6 +18,14 @@ export const getImageUrl = async (imagePath: string): Promise<string> => {
   return url;
 };
 
+export const getParadiddleSong = async (
+  paradiddleSongPath: string,
+): Promise<ParadiddleSong> => {
+  const jsonData = await readTextFile(paradiddleSongPath);
+  const paradiddleSong: ParadiddleSong = JSON.parse(jsonData);
+  return paradiddleSong;
+};
+
 export const loadSong = async (
   songsPath: string,
   songDirPath: string,
@@ -35,9 +43,9 @@ export const loadSong = async (
       // if the song data is not loaded and it is a rlrr file readit
       if (!song && entry.name.endsWith(".rlrr")) {
         baseFileName = entry.name.substring(0, lastUnderscoreIndex);
-
-        const jsonData = await readTextFile(`${songPath}/${entry.name}`);
-        const paradiddleSong: ParadiddleSong = JSON.parse(jsonData);
+        const paradiddleSong: ParadiddleSong = await getParadiddleSong(
+          `${songPath}/${entry.name}`,
+        );
         song = {
           title: paradiddleSong.recordingMetadata.title,
           artist: paradiddleSong.recordingMetadata.artist,

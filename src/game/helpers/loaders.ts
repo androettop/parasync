@@ -1,17 +1,21 @@
-import { Future, ImageSource, ImageSourceAttributeConstants, ImageSourceOptions, ImageWrapping, Sound, TextureLoader } from "excalibur";
-import { SongData } from "../../types/songs";
+import {
+  Future,
+  ImageSource,
+  ImageSourceAttributeConstants,
+  ImageSourceOptions,
+  ImageWrapping,
+  Sound,
+  TextureLoader,
+} from "excalibur";
 import { loadFile } from "./filesLoader";
 
 export class MusicFile extends Sound {
-  song: SongData;
-
-  constructor(song: SongData, path: string) {
+  constructor(path: string) {
     super(path);
-    this.song = song;
   }
 
   async load(): Promise<AudioBuffer> {
-    const blobUrl = await loadFile(this.song, this.path);
+    const blobUrl = await loadFile(this.path);
     if (!blobUrl) {
       throw new Error(`Error loading music file ${this.path}`);
     }
@@ -21,26 +25,23 @@ export class MusicFile extends Sound {
 }
 
 export class ImageFile extends ImageSource {
-  song: SongData;
-
-  constructor(song: SongData, path: string, options?: ImageSourceOptions) {
+  constructor(path: string, options?: ImageSourceOptions) {
     super(path, options);
-    this.song = song;    
   }
-   /**
+  /**
    * Begins loading the image and returns a promise that resolves when the image is loaded
    */
-   async load(): Promise<HTMLImageElement> {
+  async load(): Promise<HTMLImageElement> {
     if (this.isLoaded()) {
       return this.data;
     }
-    
+
     try {
-      const url = await loadFile(this.song, this.path);
+      const url = await loadFile(this.path);
       if (!url) {
         throw new Error(`Error loading music file ${this.path}`);
       }
-      
+
       // Decode the image
       const image = new Image();
       // Use Image.onload over Image.decode()
@@ -49,7 +50,7 @@ export class ImageFile extends ImageSource {
       const loadedFuture = new Future<void>();
       image.onload = () => loadedFuture.resolve();
       image.src = url;
-      image.setAttribute('data-original-src', this.path);
+      image.setAttribute("data-original-src", this.path);
 
       await loadedFuture.promise;
 
@@ -61,16 +62,25 @@ export class ImageFile extends ImageSource {
 
       // emit warning if potentially too big
       TextureLoader.checkImageSizeSupportedAndLog(this.data);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       throw `Error loading ImageSource from path '${this.path}' with error [${error.message}]`;
     }
     // Do a bad thing to pass the filtering as an attribute
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    this.data.setAttribute(ImageSourceAttributeConstants.Filtering, this.filtering as any); // TODO fix type
-    this.data.setAttribute(ImageSourceAttributeConstants.WrappingX, this.wrapping?.x ?? ImageWrapping.Clamp);
-    this.data.setAttribute(ImageSourceAttributeConstants.WrappingY, this.wrapping?.y ?? ImageWrapping.Clamp);
-    
+    this.data.setAttribute(
+      ImageSourceAttributeConstants.Filtering,
+      this.filtering as any,
+    ); // TODO fix type
+    this.data.setAttribute(
+      ImageSourceAttributeConstants.WrappingX,
+      this.wrapping?.x ?? ImageWrapping.Clamp,
+    );
+    this.data.setAttribute(
+      ImageSourceAttributeConstants.WrappingY,
+      this.wrapping?.y ?? ImageWrapping.Clamp,
+    );
+
     return super.load();
   }
 }

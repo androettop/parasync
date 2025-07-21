@@ -1,5 +1,12 @@
-import { Color, DisplayMode, Engine, ImageSource, ScrollPreventionMode, Sound } from "excalibur";
-import { SongData } from "../types/songs";
+import {
+  Color,
+  DisplayMode,
+  Engine,
+  ImageSource,
+  ScrollPreventionMode,
+  Sound,
+} from "excalibur";
+import { ParadiddleSong } from "../types/songs";
 import { GAME_CONFIG } from "./config";
 import { applyBlur } from "./helpers/imageEffects";
 import { ImageFile, MusicFile } from "./helpers/loaders";
@@ -7,14 +14,20 @@ import { createLoader, Resources as NotesResources } from "./resources";
 import MainScene from "./scenes/MainScene";
 
 class Game extends Engine {
-  song: SongData;
+  song: ParadiddleSong;
+  songDirPath: string;
   songTracks: Sound[] = [];
   drumTracks: Sound[] = [];
   cover: ImageSource | null = null;
   coverBg: ImageSource | null = null;
   exitHandler: () => void;
 
-  constructor(canvas: HTMLCanvasElement, song: SongData, onExit: () => void) {
+  constructor(
+    canvas: HTMLCanvasElement,
+    songDirPath: string,
+    song: ParadiddleSong,
+    onExit: () => void,
+  ) {
     super({
       canvasElement: canvas,
       resolution: { height: GAME_CONFIG.height, width: GAME_CONFIG.width },
@@ -25,6 +38,7 @@ class Game extends Engine {
     });
 
     this.song = song;
+    this.songDirPath = songDirPath;
     this.exitHandler = onExit;
   }
 
@@ -76,15 +90,14 @@ class Game extends Engine {
 
   async initialize() {
     this.songTracks = this.song.audioFileData.songTracks.map(
-      (trackName) => new MusicFile(this.song, trackName)
+      (trackName) => new MusicFile(`${this.songDirPath}/${trackName}`),
     );
     this.drumTracks = this.song.audioFileData.drumTracks.map(
-      (trackName) => new MusicFile(this.song, trackName)
+      (trackName) => new MusicFile(`${this.songDirPath}/${trackName}`),
     );
 
     this.cover = new ImageFile(
-      this.song,
-      this.song.recordingMetadata.coverImagePath
+      `${this.songDirPath}/${this.song.recordingMetadata.coverImagePath}`,
     );
 
     this.coverBg = await applyBlur(this.cover);
