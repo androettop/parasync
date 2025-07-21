@@ -33,19 +33,6 @@ export type BPMEventData = {
   time: number;
 };
 
-/**
- * Legacy song data type used in the player
- *
- * TODO: Unify this with the ParadiddleSong type
- * @deprecated
- */
-export type SongData = ParadiddleSong & {
-  // Additional fields to handle files (not present in the original JSON)
-  id: string;
-  folderName?: string;
-  folderHandle?: FileSystemDirectoryHandle;
-};
-
 // Webapp types
 export type SortDirection = "asc" | "desc";
 
