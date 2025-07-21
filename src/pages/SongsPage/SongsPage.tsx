@@ -21,17 +21,23 @@ import { Link as RRLink } from "react-router";
 import SongCard from "../../components/SongCard/SongCard";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
 import { RepoConfig, SearchParams } from "../../types/api";
-import { Song, SortDirection } from "../../types/songs";
+import { DownloadState, Song, SortDirection } from "../../types/songs";
 import { SongRepository } from "../../utils/api";
 import { CARD_SIZE, PAGE_SIZE } from "../../utils/songs";
+import { unzipSong } from "../../utils/fs";
+import useSongsPath from "../../hooks/useSongsPath";
 
 const SongsPage = () => {
+  const [songsPath] = useSongsPath();
   const [songs, setSongs] = useState<Song[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [repoConfig] = useLocalStorage<RepoConfig | null>("yaml-config", null);
   const repoRef = useRef<SongRepository | null>(null);
+  const [songsDownloadStates, setSongsDownloadStates] = useState<
+    Record<string, DownloadState>
+  >({});
 
   // Search states
   const [searchQuery, setSearchQuery] = useState("");
@@ -122,11 +128,16 @@ const SongsPage = () => {
     });
   };
 
-  const handleDownload = (song: Song) => {
-    // TODO: Download, unzip and save song in the songs folder
-    const downloadUrl = song.downloadUrl;
-    if (downloadUrl) {
-      window.open(downloadUrl, "_blank");
+  const handleDownload = async (song: Song) => {
+    if (!songsPath || !repoRef.current) return;
+    setSongsDownloadStates((prev) => ({ ...prev, [song.id]: "downloading" }));
+    try {
+      const zip = await repoRef.current.downloadZip(song);
+      if (zip) {
+        await unzipSong(songsPath, song.id, repoRef.current.config.name, zip);
+      }
+    } finally {
+      setSongsDownloadStates((prev) => ({ ...prev, [song.id]: "downloaded" }));
     }
   };
 
@@ -276,7 +287,9 @@ const SongsPage = () => {
                       artist={song.artist}
                       coverImage={song.coverUrl || ""}
                       difficulties={song.difficulties}
-                      downloadState={"not-downloaded"}
+                      downloadState={
+                        songsDownloadStates[song.id] || "not-downloaded"
+                      }
                       onDownload={() => handleDownload(song)}
                       downloads={song.downloads || 0}
                     />

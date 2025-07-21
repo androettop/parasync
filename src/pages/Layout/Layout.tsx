@@ -21,6 +21,7 @@ import {
 import { useState } from "react";
 import { Outlet, To, useNavigate } from "react-router";
 import { notFoundRoute, routes } from "../../utils/routes";
+import useSongsPath from "../../hooks/useSongsPath";
 
 const drawerWidth = 280;
 
@@ -28,7 +29,7 @@ const Layout = () => {
   const theme = useTheme();
 
   const navigate = useNavigate();
-
+  const [songsPath] = useSongsPath();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -161,7 +162,7 @@ const Layout = () => {
             <List>
               {routes
                 .filter((route) => !route.hideInDrawer)
-                .map(({ label, Icon, path, name }) => (
+                .map(({ label, Icon, path, name, requiresSongDir }) => (
                   <ListItem key={name} disablePadding>
                     <ListItemButton
                       sx={{
@@ -169,6 +170,7 @@ const Layout = () => {
                         justifyContent: "initial",
                         px: 2.5,
                       }}
+                      disabled={requiresSongDir && !songsPath}
                       onClick={() => handleNavigation(path)}
                     >
                       <ListItemIcon

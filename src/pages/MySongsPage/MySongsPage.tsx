@@ -70,6 +70,14 @@ const MySongsPage = () => {
               >
                 Choose Songs Folder
               </Button>
+              <Button
+                variant="outlined"
+                color="primary"
+                startIcon={<FolderOpenIcon />}
+                onClick={() => setSongsPath(null)}
+              >
+                Clear
+              </Button>
             </Box>
           </Box>
 
