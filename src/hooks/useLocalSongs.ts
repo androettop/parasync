@@ -6,7 +6,7 @@ import { getLocalSongs } from "../utils/fs";
 import { releaseFileUrl } from "../game/helpers/filesLoader";
 
 const useLocalSongs = () => {
-  const [songs, setSongs] = useState<LocalSong[]>([]);
+  const [songs, setSongs] = useState<LocalSong[] | null>(null);
   const [songsPath] = useSongsPath();
 
   const handleLoadSongs = useStaticHandler(async (songsPath) => {
@@ -17,7 +17,7 @@ const useLocalSongs = () => {
   });
 
   const revokeCovers = useStaticHandler(() => {
-    songs.forEach((localSong) => releaseFileUrl(localSong.song?.coverUrl));
+    songs?.forEach((localSong) => releaseFileUrl(localSong.song?.coverUrl));
   });
 
   useEffect(() => {
