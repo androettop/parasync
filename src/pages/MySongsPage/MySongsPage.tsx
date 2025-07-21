@@ -14,7 +14,6 @@ const MySongsPage = () => {
 
   const navigate = useNavigate();
 
-  // Check for existing permissions on component mount
   const handlePlay = async (localSong: LocalSong, difficulty: Difficulty) => {
     const fileName = `${localSong.baseFileName}_${difficulty}.rlrr`;
     const playerUrl = `/play?file=${encodeURIComponent(fileName)}`;

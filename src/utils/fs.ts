@@ -113,6 +113,13 @@ export const ensureDir = async (path: string): Promise<void> => {
   }
 };
 
+export const getSongFolderPrefix = (
+  songId: string,
+  repoName: string,
+): string => {
+  return `${repoName}-${songId}-`;
+};
+
 export const unzipSong = async (
   songsPath: string,
   songId: string,
@@ -121,7 +128,7 @@ export const unzipSong = async (
 ): Promise<void> => {
   const zipFile = await JSZip.loadAsync(zip);
   const files = Object.keys(zipFile.files);
-  const folderPrefix = `${repoName}-${songId}-`;
+  const folderPrefix = getSongFolderPrefix(songId, repoName);
   for (const file of files) {
     const content = await zipFile.file(file)?.async("uint8array");
     if (content) {
