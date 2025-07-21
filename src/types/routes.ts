@@ -37,4 +37,8 @@ export type Route = {
    * @default true
    */
   shouldBeSignedIn?: boolean;
+  /** Whether the user should have a song directory to access this route.
+   * @default false
+   */
+  requiresSongDir?: boolean;
 };
