@@ -1,3 +1,5 @@
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import SearchIcon from "@mui/icons-material/Search";
 import {
   Box,
@@ -17,13 +19,11 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { Link as RRLink } from "react-router";
 import SongCard from "../../components/SongCard/SongCard";
-import { Song, SortDirection } from "../../types/songs";
-import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
-import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+import { useLocalStorage } from "../../hooks/useLocalStorage";
 import { RepoConfig, SearchParams } from "../../types/api";
+import { Song, SortDirection } from "../../types/songs";
 import { SongRepository } from "../../utils/api";
 import { CARD_SIZE, PAGE_SIZE } from "../../utils/songs";
-import { useLocalStorage } from "../../hooks/useLocalStorage";
 
 const SongsPage = () => {
   const [songs, setSongs] = useState<Song[]>([]);
@@ -93,6 +93,7 @@ const SongsPage = () => {
       // Not perfect, but i'm lazy
       setHasMore(songs.length === PAGE_SIZE);
     } catch (err) {
+      console.log(err);
       setError(err instanceof Error ? err.message : "Failed to search songs");
     } finally {
       setIsLoading(false);

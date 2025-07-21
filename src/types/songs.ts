@@ -68,13 +68,13 @@ export type Song = {
   uploadedBy: string;
   title: string;
   artist: string;
-  downloads: number;
-  coverUrl: string;
+  downloads?: number;
+  coverUrl?: string;
   difficulties: Difficulty[];
-  downloadUrl: string;
+  downloadUrl?: string;
 };
 
 export type LocalSong = {
-  song: Song;
-  folderHandle: FileSystemDirectoryHandle;
+  song?: Song;
+  folderName: string;
 };

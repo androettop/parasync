@@ -2,6 +2,8 @@ import { Parser as ExprParser } from "expr-eval";
 import { decode as decodeMsgPack } from "msgpackr";
 import { RepoConfig, SearchParams } from "../types/api";
 import { Song } from "../types/songs";
+import { fetch } from "@tauri-apps/plugin-http";
+
 export class SongRepository {
   config: RepoConfig;
   isLoading: boolean = false;

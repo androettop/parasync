@@ -48,8 +48,12 @@ interface DirectoryPickerOptions {
     | "pictures"
     | "videos";
 }
-
+//window.__TAURI_INTERNALS__
 interface Window {
+  __TAURI_INTERNALS__: {
+    invoke: (cmd: string, args?: any[]) => Promise<any>;
+    event: (event: string, listener: (data: any) => void) => void;
+  };
   showDirectoryPicker(
     options?: DirectoryPickerOptions,
   ): Promise<FileSystemDirectoryHandle>;

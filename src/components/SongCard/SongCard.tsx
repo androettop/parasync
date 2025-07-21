@@ -36,7 +36,7 @@ const SongCard = ({
   title,
   artist,
   coverImage,
-  difficulties,
+  difficulties = [],
   downloadState,
   downloads = 0,
   onDownload,
@@ -52,7 +52,7 @@ const SongCard = ({
 
   const orderedDifficulties = (
     ["Easy", "Medium", "Hard", "Expert"] as Difficulty[]
-  ).filter((difficulty) => difficulties?.includes(difficulty));
+  ).filter((difficulty) => difficulties.includes(difficulty));
 
   useMarquee(titleRef, isHovering);
 
@@ -68,7 +68,11 @@ const SongCard = ({
   const handleCardClick = (event: React.MouseEvent) => {
     if (downloadState === "downloaded") {
       if (onPlay) {
-        setAnchorEl(event.currentTarget as HTMLElement);
+        if (difficulties.length > 1) {
+          setAnchorEl(event.currentTarget as HTMLElement);
+        } else if (difficulties.length === 1) {
+          onPlay?.(difficulties[0]);
+        }
       }
     } else if (downloadState === "not-downloaded") {
       onDownload?.();
@@ -232,6 +236,7 @@ const SongCard = ({
         anchorEl={anchorEl}
         open={isMenuOpen}
         onClose={handleCloseMenu}
+        disableScrollLock
         anchorOrigin={{
           vertical: "center",
           horizontal: "center",
