@@ -1,6 +1,6 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { readDir, readTextFile, readFile } from "@tauri-apps/plugin-fs";
-import { Difficulty, LocalSong, ParadiddleSong } from "../types/songs";
+import { Difficulty, LocalSong, ParadiddleSong, Song } from "../types/songs";
 import { v4 as uuid } from "uuid";
 
 export const selectSongsDirectory = async () => {
@@ -20,18 +20,25 @@ export const getImageUrl = async (imagePath: string): Promise<string> => {
 
 export const loadSong = async (
   songsPath: string,
-  localSong: LocalSong,
-): Promise<LocalSong> => {
-  const songPath = `${songsPath}/${localSong.folderName}`;
+  songDirPath: string,
+): Promise<LocalSong | null> => {
+  const songPath = `${songsPath}/${songDirPath}`;
   const songDir = await readDir(songPath);
   const difficulties: Difficulty[] = [];
+  let song: Song | null = null;
+  let baseFileName = "";
+
   for (const entry of songDir) {
     if (entry.isFile) {
+      const lastUnderscoreIndex = entry.name.lastIndexOf("_");
+
       // if the song data is not loaded and it is a rlrr file readit
-      if (!localSong.song && entry.name.endsWith(".rlrr")) {
+      if (!song && entry.name.endsWith(".rlrr")) {
+        baseFileName = entry.name.substring(0, lastUnderscoreIndex);
+
         const jsonData = await readTextFile(`${songPath}/${entry.name}`);
         const paradiddleSong: ParadiddleSong = JSON.parse(jsonData);
-        localSong.song = {
+        song = {
           title: paradiddleSong.recordingMetadata.title,
           artist: paradiddleSong.recordingMetadata.artist,
           id: uuid(),
@@ -44,19 +51,25 @@ export const loadSong = async (
         };
       }
       if (entry.name.endsWith(".rlrr")) {
-        // the file name always ends with song_name_{Difficulty}.rlrr
-        const difficulty = (entry.name.split("_").pop()?.replace(".rlrr", "") ||
-          "Easy") as Difficulty;
-        difficulties.push(difficulty);
+        const difficulty =
+          entry.name.substring(
+            lastUnderscoreIndex + 1,
+            entry.name.length - 5,
+          ) || "Easy";
+        difficulties.push(difficulty as Difficulty);
       }
     }
   }
 
-  if (localSong.song) {
-    localSong.song.difficulties = difficulties;
+  if (song) {
+    song.difficulties = difficulties;
+    return {
+      baseFileName: `${songDirPath}/${baseFileName}`,
+      song,
+    };
+  } else {
+    return null;
   }
-
-  return localSong;
 };
 
 export const getLocalSongs = async (
@@ -66,11 +79,10 @@ export const getLocalSongs = async (
   const songs: LocalSong[] = [];
   for (const entry of entries) {
     if (entry.isDirectory) {
-      const localSong: LocalSong = {
-        folderName: entry.name,
-      };
-      await loadSong(songsFolder, localSong);
-      songs.push(localSong);
+      const localSong = await loadSong(songsFolder, entry.name);
+      if (localSong) {
+        songs.push(localSong);
+      }
     }
   }
   return songs;

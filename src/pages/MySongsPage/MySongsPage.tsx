@@ -6,7 +6,7 @@ import useStaticHandler from "../../components/hooks/useStaticHandler";
 import SongCard from "../../components/SongCard/SongCard";
 import useSongsPath from "../../hooks/useSongsPath";
 import { Difficulty, LocalSong } from "../../types/songs";
-import { getLocalSongs, loadSong, selectSongsDirectory } from "../../utils/fs";
+import { getLocalSongs, selectSongsDirectory } from "../../utils/fs";
 import { CARD_SIZE } from "../../utils/songs";
 
 const MySongsPage = () => {
@@ -16,11 +16,10 @@ const MySongsPage = () => {
   const navigate = useNavigate();
 
   // Check for existing permissions on component mount
-  const handlePlay = async (song: LocalSong, difficulty: Difficulty) => {
-    // Logic to play the song
-    console.log("Playing song:", song.song?.title);
-    console.log("Difficulty:", difficulty);
-    navigate("/play?file=");
+  const handlePlay = async (localSong: LocalSong, difficulty: Difficulty) => {
+    const fileName = `${localSong.baseFileName}${difficulty}.rlrr`;
+    const playerUrl = `/play?file=${encodeURIComponent(fileName)}`;
+    navigate(playerUrl);
   };
 
   const handleSelectSongsFolder = async () => {

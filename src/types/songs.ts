@@ -76,5 +76,5 @@ export type Song = {
 
 export type LocalSong = {
   song?: Song;
-  folderName: string;
+  baseFileName: string;
 };
