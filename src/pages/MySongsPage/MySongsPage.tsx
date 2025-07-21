@@ -3,67 +3,30 @@ import { useEffect, useState } from "react";
 import { Link as RRLink, useNavigate } from "react-router";
 import SongCard from "../../components/SongCard/SongCard";
 import { Difficulty, LocalSong } from "../../types/songs";
-import {
-  getGameSongFilePath,
-  getLocalSongs,
-  getStoredDirectoryHandle,
-  hasSongsFolderPermissions,
-  isFileSystemAccessSupported,
-  selectSongsFolder,
-} from "../../utils/fs";
+
 import { CARD_SIZE } from "../../utils/songs";
+import { getLocalSongs, loadSong, selectSongsDirectory } from "../../utils/fs";
 
 const MySongsPage = () => {
   const [songs, setSongs] = useState<LocalSong[]>([]);
   const [hasFSPermissions, setHasFSPermissions] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const unsupportedBrowser = !isFileSystemAccessSupported();
 
   // Check for existing permissions on component mount
-  useEffect(() => {
-    const checkPermissions = async () => {
-      try {
-        // Check if we have existing permissions
-        const hasPermissions = await hasSongsFolderPermissions();
-
-        if (hasPermissions) {
-          const storedHandle = await getStoredDirectoryHandle();
-          if (storedHandle) {
-            setHasFSPermissions(true);
-            const songs = await getLocalSongs(storedHandle);
-            setSongs(songs);
-          }
-        }
-      } catch (error) {
-        console.error("Error checking permissions:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkPermissions();
-  }, []);
-
   const handlePlay = async (song: LocalSong, difficulty: Difficulty) => {
     // Logic to play the song
-    const songFileName = await getGameSongFilePath(song, difficulty);
-    navigate(`/play?file=${songFileName}`);
   };
 
   const handleSelectSongsFolder = async () => {
-    try {
-      setIsLoading(true);
-      const selectedHandle = await selectSongsFolder();
-      if (selectedHandle) {
-        setHasFSPermissions(true);
-        const songs = await getLocalSongs(selectedHandle);
-        setSongs(songs);
-      }
-    } catch (error) {
-      console.error("Failed to select songs folder:", error);
-    } finally {
-      setIsLoading(false);
+    const songsPath = await selectSongsDirectory();
+    if (songsPath) {
+      setHasFSPermissions(true);
+      const songs = await getLocalSongs(songsPath);
+      setSongs(songs);
+      const promises = songs.map((song) => loadSong(songsPath, song));
+      const loadedSongs = await Promise.all(promises);
+      setSongs(loadedSongs);
     }
   };
 
@@ -91,14 +54,7 @@ const MySongsPage = () => {
 
         {/* Songs List */}
         <Grid size={12}>
-          {unsupportedBrowser ? (
-            <Paper sx={{ p: 4, textAlign: "center", mb: 3 }}>
-              <Typography variant="h6" color="error">
-                This browser cannot access your local files. Use a browser like
-                Chrome or Edge to manage your songs.
-              </Typography>
-            </Paper>
-          ) : isLoading ? (
+          {isLoading ? (
             <Paper sx={{ p: 4, textAlign: "center" }}>
               <Typography variant="h6">Loading...</Typography>
             </Paper>
@@ -125,16 +81,22 @@ const MySongsPage = () => {
             <Grid container spacing={2}>
               {songs.length > 0 ? (
                 songs.map((localSong) => (
-                  <Grid key={localSong.song.id} size={CARD_SIZE}>
-                    <SongCard
-                      title={localSong.song.title}
-                      artist={localSong.song.artist}
-                      coverImage={localSong.song.coverUrl || ""}
-                      difficulties={localSong.song.difficulties}
-                      downloadState={"downloaded"}
-                      onPlay={(difficulty) => handlePlay(localSong, difficulty)}
-                      downloads={localSong.song.downloads || 0}
-                    />
+                  <Grid key={localSong.folderName} size={CARD_SIZE}>
+                    {localSong.song ? (
+                      <SongCard
+                        title={localSong.song.title}
+                        artist={localSong.song.artist}
+                        coverImage={localSong.song.coverUrl || ""}
+                        difficulties={localSong.song.difficulties}
+                        downloadState={"downloaded"}
+                        onPlay={(difficulty) =>
+                          handlePlay(localSong, difficulty)
+                        }
+                        downloads={localSong.song.downloads || 0}
+                      />
+                    ) : (
+                      <SongCard isLoading />
+                    )}
                   </Grid>
                 ))
               ) : (
