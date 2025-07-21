@@ -107,7 +107,7 @@ const MySongsPage = () => {
             <Grid container spacing={2}>
               {songs.length > 0 ? (
                 songs.map((localSong) => (
-                  <Grid key={localSong.folderName} size={CARD_SIZE}>
+                  <Grid key={localSong.baseFileName} size={CARD_SIZE}>
                     {localSong.song ? (
                       <SongCard
                         title={localSong.song.title}
