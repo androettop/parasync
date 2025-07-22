@@ -20,7 +20,7 @@ iOS, Android & Meta Quest versions will be available soon.
 ## 🧩 Features
 
 - ⚡ Drum-focused *Guitar Hero*-like player. 
-- 🎵 Supports Paradiddle song files (`.paradiddle.json`).
+- 🎵 Supports Paradiddle song files.
 - 📂 Built-in tool for downloading and managing song libraries.
 - 🌐 Allows configuration of remote song libraries to browse and fetch new content.
 
