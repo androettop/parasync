@@ -1,6 +1,6 @@
 # ParaSync 🥁
 
-**ParaSync** is a *Guitar Hero*-style rhythm game for drums.
+**ParaSync** is a *Guitar Hero*-style rhythm app for drums.
 
 It’s fully compatible with songs from the popular VR drumming app [Paradiddle](https://paradiddleapp.com).
 
@@ -19,7 +19,7 @@ iOS, Android & Meta Quest versions will be available soon.
 
 ## 🧩 Features
 
-- ⚡ Drum-focused *Guitar Hero*-like gameplay. 
+- ⚡ Drum-focused *Guitar Hero*-like player. 
 - 🎵 Supports Paradiddle song files (`.paradiddle.json`).
 - 📂 Built-in tool for downloading and managing song libraries.
 - 🌐 Allows configuration of remote song libraries to browse and fetch new content.
@@ -28,4 +28,4 @@ iOS, Android & Meta Quest versions will be available soon.
 
 This project is **not affiliated with Paradiddle** in any way.
 
-This game only uses one song format compatible with paradiddle.
+This app only uses one song format compatible with paradiddle.
