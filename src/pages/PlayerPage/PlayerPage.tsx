@@ -24,7 +24,7 @@ const PlayerPage = () => {
     setSongDirPath(fileDirPath);
 
     getParadiddleSong(fullFile).then(setSong);
-  }, [file, navigate]);
+  }, [file, navigate, songsPath]);
 
   return (
     <Box>

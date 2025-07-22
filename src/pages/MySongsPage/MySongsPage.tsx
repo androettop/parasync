@@ -1,6 +1,7 @@
 import FolderOpenIcon from "@mui/icons-material/FolderOpen";
 import { Box, Button, Grid, Link, Paper, Typography } from "@mui/material";
 import { Link as RRLink, useNavigate } from "react-router";
+import { platform } from "@tauri-apps/plugin-os";
 import SongCard from "../../components/SongCard/SongCard";
 import useLocalSongs from "../../hooks/useLocalSongs";
 import useSongsPath from "../../hooks/useSongsPath";
@@ -27,6 +28,8 @@ const MySongsPage = () => {
     }
   };
 
+  const isAndroid = platform() === "android";
+
   return (
     <Box>
       <Grid container spacing={3}>
@@ -47,25 +50,30 @@ const MySongsPage = () => {
             >
               My Songs
             </Typography>
-            <Box>
-              {/* Choose songs folder button */}
-              <Button
-                variant="outlined"
-                color="primary"
-                startIcon={<FolderOpenIcon />}
-                onClick={handleSelectSongsFolder}
-              >
-                Choose Songs Folder
-              </Button>
-              <Button
-                variant="outlined"
-                color="primary"
-                startIcon={<FolderOpenIcon />}
-                onClick={() => setSongsPath(null)}
-              >
-                Clear
-              </Button>
-            </Box>
+            {!isAndroid && (
+              <Box>
+                {/* Choose songs folder button */}
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  startIcon={<FolderOpenIcon />}
+                  onClick={handleSelectSongsFolder}
+                >
+                  Choose Songs Folder
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  startIcon={<FolderOpenIcon />}
+                  onClick={() => setSongsPath(null)}
+                  sx={{
+                    marginLeft: 2,
+                  }}
+                >
+                  Clear
+                </Button>
+              </Box>
+            )}
           </Box>
 
           <Typography variant="subtitle1" color="text.secondary">
