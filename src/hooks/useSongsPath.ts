@@ -13,9 +13,8 @@ const useSongsPath = (): [string | null, (value: string | null) => void] => {
 
   useEffect(() => {
     (async () => {
-      const home = await path.appLocalDataDir();
-      const androidSongspath = await path.join(home, "Songs");
-      setAndroidSongsPath(androidSongspath);
+      const appDir = await path.appLocalDataDir();
+      setAndroidSongsPath(appDir);
     })();
   }, []);
 
