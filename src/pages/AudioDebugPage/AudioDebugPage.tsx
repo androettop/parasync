@@ -55,7 +55,10 @@ const AudioDebugPage = () => {
 
     const interval = setInterval(async () => {
       try {
-        const audioStatus = await window.__TAURI_INTERNALS__.invoke("get_audio_status", { id: audioId });
+        const audioStatus = await window.__TAURI_INTERNALS__.invoke(
+          "get_audio_status",
+          { id: audioId }
+        );
         setStatus(audioStatus);
       } catch (err) {
         console.error("Error getting audio status:", err);
@@ -68,7 +71,9 @@ const AudioDebugPage = () => {
   const loadAudio = async () => {
     try {
       setError(null);
-      const id = await window.__TAURI_INTERNALS__.invoke("load_audio", { path: audioPath });
+      const id = await window.__TAURI_INTERNALS__.invoke("load_audio", {
+        path: audioPath,
+      });
       setAudioId(id);
       showMessage(`Audio loaded with ID: ${id}`);
     } catch (err) {
@@ -121,7 +126,10 @@ const AudioDebugPage = () => {
       return;
     }
     try {
-      await window.__TAURI_INTERNALS__.invoke("seek_audio", { id: audioId, position: seekPosition });
+      await window.__TAURI_INTERNALS__.invoke("seek_audio", {
+        id: audioId,
+        position: seekPosition,
+      });
       showMessage(`Seeked to ${seekPosition} seconds`);
     } catch (err) {
       showError(`Error seeking audio: ${err}`);
@@ -134,7 +142,10 @@ const AudioDebugPage = () => {
       return;
     }
     try {
-      await window.__TAURI_INTERNALS__.invoke("set_volume", { id: audioId, volume: newVolume });
+      await window.__TAURI_INTERNALS__.invoke("set_volume", {
+        id: audioId,
+        volume: newVolume,
+      });
       setVolume(newVolume);
       showMessage(`Volume set to ${Math.round(newVolume * 100)}%`);
     } catch (err) {
@@ -160,7 +171,7 @@ const AudioDebugPage = () => {
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   return (
@@ -168,20 +179,22 @@ const AudioDebugPage = () => {
       <Typography variant="h4" gutterBottom>
         Audio Debug Page
       </Typography>
-      
+
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
         Test all Tauri audio backend functions
       </Typography>
 
-      {message && (
+      {message ? (
         <Alert severity="success" sx={{ mb: 2 }}>
           {message}
         </Alert>
-      )}
-
-      {error && (
+      ) : error ? (
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
+        </Alert>
+      ) : (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          ready
         </Alert>
       )}
 
@@ -206,10 +219,10 @@ const AudioDebugPage = () => {
                   Load Audio
                 </Button>
                 {audioId !== null && (
-                  <Chip 
-                    label={`Audio ID: ${audioId}`} 
-                    color="primary" 
-                    size="small" 
+                  <Chip
+                    label={`Audio ID: ${audioId}`}
+                    color="primary"
+                    size="small"
                   />
                 )}
               </Stack>
@@ -230,8 +243,8 @@ const AudioDebugPage = () => {
                     <Typography variant="body2" color="text.secondary">
                       Status
                     </Typography>
-                    <Chip 
-                      label={status.playing ? "Playing" : "Paused"} 
+                    <Chip
+                      label={status.playing ? "Playing" : "Paused"}
                       color={status.playing ? "success" : "default"}
                     />
                   </Grid>
@@ -240,7 +253,8 @@ const AudioDebugPage = () => {
                       Position
                     </Typography>
                     <Typography variant="body1">
-                      {formatTime(status.position)} / {formatTime(status.duration)}
+                      {formatTime(status.position)} /{" "}
+                      {formatTime(status.duration)}
                     </Typography>
                   </Grid>
                   <Grid size={4}>
@@ -248,7 +262,10 @@ const AudioDebugPage = () => {
                       Progress
                     </Typography>
                     <Typography variant="body1">
-                      {status.duration > 0 ? Math.round((status.position / status.duration) * 100) : 0}%
+                      {status.duration > 0
+                        ? Math.round((status.position / status.duration) * 100)
+                        : 0}
+                      %
                     </Typography>
                   </Grid>
                 </Grid>
@@ -268,7 +285,11 @@ const AudioDebugPage = () => {
                 <Button variant="contained" color="success" onClick={playAudio}>
                   Play
                 </Button>
-                <Button variant="contained" color="warning" onClick={pauseAudio}>
+                <Button
+                  variant="contained"
+                  color="warning"
+                  onClick={pauseAudio}
+                >
                   Pause
                 </Button>
                 <Button variant="contained" color="error" onClick={stopAudio}>
@@ -300,9 +321,9 @@ const AudioDebugPage = () => {
                   max={1}
                   step={0.1}
                   marks={[
-                    { value: 0, label: '0%' },
-                    { value: 0.5, label: '50%' },
-                    { value: 1, label: '100%' },
+                    { value: 0, label: "0%" },
+                    { value: 0.5, label: "50%" },
+                    { value: 1, label: "100%" },
                   ]}
                 />
                 <Stack direction="row" spacing={1}>
@@ -340,19 +361,40 @@ const AudioDebugPage = () => {
                   Seek to Position
                 </Button>
                 <Stack direction="row" spacing={1}>
-                  <Button size="small" onClick={() => { setSeekPosition(0); seekAudio(); }}>
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      setSeekPosition(0);
+                      seekAudio();
+                    }}
+                  >
                     Start
                   </Button>
-                  <Button size="small" onClick={() => { setSeekPosition(10); seekAudio(); }}>
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      setSeekPosition(10);
+                      seekAudio();
+                    }}
+                  >
                     +10s
                   </Button>
-                  <Button size="small" onClick={() => { setSeekPosition(30); seekAudio(); }}>
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      setSeekPosition(30);
+                      seekAudio();
+                    }}
+                  >
                     +30s
                   </Button>
                   {status && (
-                    <Button 
-                      size="small" 
-                      onClick={() => { setSeekPosition(status.duration / 2); seekAudio(); }}
+                    <Button
+                      size="small"
+                      onClick={() => {
+                        setSeekPosition(status.duration / 2);
+                        seekAudio();
+                      }}
                     >
                       Middle
                     </Button>
@@ -370,8 +412,8 @@ const AudioDebugPage = () => {
               <Typography variant="h6" gutterBottom>
                 Automated Test Sequence
               </Typography>
-              <Button 
-                variant="outlined" 
+              <Button
+                variant="outlined"
                 fullWidth
                 onClick={() => runTestSequence()}
               >
@@ -391,36 +433,38 @@ const AudioDebugPage = () => {
     }
 
     showMessage("Starting automated test sequence...");
-    
+
     try {
       // Test 1: Play
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       await playAudio();
-      
+
       // Test 2: Wait and adjust volume
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
       await setVolumeAudio(0.5);
-      
+
       // Test 3: Seek to middle
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
       if (status) {
-        await window.__TAURI_INTERNALS__.invoke("seek_audio", { id: audioId, position: status.duration / 2 });
+        await window.__TAURI_INTERNALS__.invoke("seek_audio", {
+          id: audioId,
+          position: status.duration / 2,
+        });
       }
-      
+
       // Test 4: Pause
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
       await pauseAudio();
-      
+
       // Test 5: Resume
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       await playAudio();
-      
+
       // Test 6: Stop
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
       await stopAudio();
-      
+
       showMessage("Test sequence completed successfully!");
-      
     } catch (err) {
       showError(`Test sequence failed: ${err}`);
     }
