@@ -92,7 +92,7 @@ class Game extends Engine {
 
   async initialize() {
     this.songTracks = await Promise.all(this.song.audioFileData.songTracks.map(
-      async (trackName) => RustAudio.load(`${this.songDirPath}/${trackName}`),
+      async (trackName, i) => RustAudio.load(`${this.songDirPath}/${trackName}`, i === 0 /* Track position only for the first track */),
     ));
     this.drumTracks = await Promise.all(this.song.audioFileData.drumTracks.map(
       async (trackName) => RustAudio.load(`${this.songDirPath}/${trackName}`),

@@ -1,3 +1,5 @@
+import { getCurrentWindow } from "@tauri-apps/api/window";
+
 export type AudioStatus = {
   position: number;
   duration: number;
@@ -13,17 +15,26 @@ export class RustAudio {
   private _volume: number = 1.0;
   private _updateInterval: number | null = null;
 
-  constructor(id: number) {
+  constructor(id: number, trackPosition: boolean = false) {
     this._id = id;
     this.updateStatus();
-    this._updateInterval = setInterval(() => this.updateStatus(), 3000);
+    // Escuchar eventos de posición emitidos por Rust
+    if(trackPosition) {
+      getCurrentWindow().listen(`audio-position-${this._id}`, (event: { payload: any }) => {
+        if (typeof event.payload === "number") {
+          console.log("Received audio position event:", event.payload);
+          this._position = event.payload;
+        }
+      });
+    }
   }
 
-  static async load(path: string): Promise<RustAudio> {
+  static async load(path: string, trackPosition: boolean = false): Promise<RustAudio> {
     const id = await window.__TAURI_INTERNALS__.invoke("load_audio", {
       path,
+      trackPosition,
     } as any);
-    return new RustAudio(id);
+    return new RustAudio(id, trackPosition);
   }
 
   async play(): Promise<void> {
@@ -71,9 +82,6 @@ export class RustAudio {
       "get_audio_status",
       { id: this._id } as any
     );
-
-    console.log("Audio status:", status);
-    this._position = status.position;
     this._duration = status.duration;
   }
 
