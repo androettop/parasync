@@ -5,9 +5,8 @@ use std::fs::File;
 
 use phonic::{
     DefaultOutputDevice, FilePlaybackOptions, Player, PlaybackId,
-    PlaybackStatusEvent, OutputDevice,
+    OutputDevice,
 };
-use crossbeam_channel;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 use symphonia::core::io::MediaSourceStream;
@@ -19,6 +18,8 @@ use symphonia::default::get_probe;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AudioStatus {
     pub duration: Option<f64>, // Duration in seconds
+    pub position: f64,         // Current position in seconds
+    pub is_playing: bool,      // Whether the audio is currently playing
 }
 
 // Track metadata by file path
@@ -28,13 +29,14 @@ struct AudioTrack {
     duration: Option<Duration>,
     current_position: f64, // Track current position for seeking
     is_playing: bool,
+    playback_start_time: Option<std::time::Instant>, // When playback started
+    playback_start_position: f64, // Position when playback started
 }
 
 // Global audio manager using phonic
 pub struct AudioManager {
     player: Arc<Mutex<Player>>,
     tracks: Arc<Mutex<HashMap<String, AudioTrack>>>, // Use file path as key
-    playback_status_receiver: Option<crossbeam_channel::Receiver<PlaybackStatusEvent>>,
 }
 
 impl AudioManager {
@@ -47,16 +49,12 @@ impl AudioManager {
         
         println!("[AUDIO] Default audio device opened successfully");
         
-        // Create a channel to receive playback status events
-        let (playback_status_sender, playback_status_receiver) = crossbeam_channel::bounded(32);
-        
         // Create the player
-        let player = Player::new(device.sink(), Some(playback_status_sender));
+        let player = Player::new(device.sink(), None);
         
         let manager = AudioManager {
             player: Arc::new(Mutex::new(player)),
             tracks: Arc::new(Mutex::new(HashMap::new())),
-            playback_status_receiver: Some(playback_status_receiver),
         };
         
         println!("[AUDIO] AudioManager created successfully with phonic");
@@ -110,9 +108,10 @@ fn get_audio_duration(file_path: &str) -> Result<Duration, String> {
 #[tauri::command]
 pub fn play_audio(
     path: String,
+    position: Option<f64>, // Optional position in seconds
     audio_manager: State<AudioManagerState>,
 ) -> Result<(), String> {
-    println!("[AUDIO] play_audio called with path: {}", path);
+    println!("[AUDIO] play_audio called with path: {}, position: {:?}", path, position);
     
     let manager = audio_manager.lock().unwrap();
     let mut tracks = manager.tracks.lock().unwrap();
@@ -138,10 +137,20 @@ pub fn play_audio(
             duration,
             current_position: 0.0,
             is_playing: false,
+            playback_start_time: None,
+            playback_start_position: 0.0,
         }
     });
 
     println!("[AUDIO] Found/created track for path: {}", path);
+    
+    // If position is provided, use it; otherwise use current position
+    if let Some(pos) = position {
+        track.current_position = pos;
+        println!("[AUDIO] Using provided position: {}", pos);
+    } else {
+        println!("[AUDIO] Using stored position: {}", track.current_position);
+    }
     
     let mut player = manager.player.lock().unwrap();
     
@@ -172,6 +181,8 @@ pub fn play_audio(
     // Update the track with the new phonic ID and state
     track.phonic_id = Some(new_phonic_id);
     track.is_playing = true;
+    track.playback_start_time = Some(std::time::Instant::now());
+    track.playback_start_position = track.current_position;
     println!("[AUDIO] Started streaming playback with phonic ID: {}", new_phonic_id);
     
     println!("[AUDIO] play_audio completed successfully for path: {}", path);
@@ -201,12 +212,25 @@ pub fn pause_audio(
                 println!("[AUDIO] Source stopped successfully");
             }
             
-            // Mark as paused and clear the phonic ID
+            // Calculate the current position before pausing
+            if let Some(start_time) = track.playback_start_time {
+                let elapsed = start_time.elapsed().as_secs_f64();
+                track.current_position = track.playback_start_position + elapsed;
+                
+                // Clamp to duration if we have it
+                if let Some(duration) = track.duration {
+                    let duration_secs = duration.as_secs_f64();
+                    track.current_position = track.current_position.min(duration_secs);
+                }
+            }
+            
+            // Mark as paused and clear the phonic ID and timing info
             track.phonic_id = None;
             track.is_playing = false;
-            // TODO: We should track the current playback position here for proper resume
-            // For now, we'll reset to 0
-            track.current_position = 0.0;
+            track.playback_start_time = None;
+            track.playback_start_position = 0.0;
+            // NOTE: We keep track.current_position as calculated above
+            println!("[AUDIO] Track paused at position: {}", track.current_position);
         } else {
             println!("[AUDIO] Track is already paused/stopped");
         }
@@ -247,6 +271,8 @@ pub fn stop_audio(
         track.phonic_id = None;
         track.is_playing = false;
         track.current_position = 0.0;
+        track.playback_start_time = None;
+        track.playback_start_position = 0.0;
         
         println!("[AUDIO] stop_audio completed successfully for path: {}", path);
         Ok(())
@@ -275,7 +301,7 @@ pub fn seek_audio(
         track.current_position = position;
         
         if let Some(phonic_id) = track.phonic_id {
-            // If currently playing, seek the active source
+            // If currently playing, seek the active source and update timing
             let mut player = manager.player.lock().unwrap();
             let seek_duration = Duration::from_secs_f64(position);
             
@@ -284,6 +310,9 @@ pub fn seek_audio(
                 println!("[AUDIO] ERROR: {}", error_msg);
                 Err(error_msg)
             } else {
+                // Update timing info after successful seek
+                track.playback_start_time = Some(std::time::Instant::now());
+                track.playback_start_position = position;
                 println!("[AUDIO] Seek successful to position: {}", position);
                 println!("[AUDIO] seek_audio completed successfully for path: {}", path);
                 Ok(())
@@ -351,14 +380,41 @@ pub fn get_audio_status(
             duration,
             current_position: 0.0,
             is_playing: false,
+            playback_start_time: None,
+            playback_start_position: 0.0,
         }
     });
 
     let duration = track.duration.map(|d| d.as_secs_f64());
-    println!("[AUDIO] Track duration for path {}: {:?} seconds", path, duration);
+    
+    // Calculate current position based on elapsed time if playing
+    let position = if track.is_playing {
+        if let Some(start_time) = track.playback_start_time {
+            let elapsed = start_time.elapsed().as_secs_f64();
+            let calculated_position = track.playback_start_position + elapsed;
+            
+            // Clamp to duration if we have it
+            if let Some(dur) = duration {
+                calculated_position.min(dur)
+            } else {
+                calculated_position
+            }
+        } else {
+            track.current_position
+        }
+    } else {
+        track.current_position
+    };
+    
+    let is_playing = track.is_playing;
+    
+    println!("[AUDIO] Track status for path {}: duration={:?} seconds, position={} seconds, playing={}", 
+             path, duration, position, is_playing);
     
     Ok(AudioStatus {
         duration,
+        position,
+        is_playing,
     })
 }
 

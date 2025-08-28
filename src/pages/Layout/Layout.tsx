@@ -16,7 +16,6 @@ import {
   ListItemText,
   Menu,
   MenuItem,
-  Slider,
   Stack,
   TextField,
   Toolbar,
@@ -39,7 +38,6 @@ const Layout = () => {
   const navigate = useNavigate();
   const [songsPath] = useSongsPath();
   const [delay, setDelay] = useLocalStorage<number>("audio-delay", -30);
-  const [showAdvancedLatency, setShowAdvancedLatency] = useState(false);
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -59,11 +57,6 @@ const Layout = () => {
     setDelay(-30);
   };
 
-  const getDelayLabel = (delayValue: number) => {
-    if (delayValue === 0) return "Sync";
-    if (delayValue > 0) return `+${delayValue}ms`;
-    return `${delayValue}ms`;
-  };
   const handleDrawerClose = () => {
     setIsClosing(true);
     setIsDrawerOpen(false);
