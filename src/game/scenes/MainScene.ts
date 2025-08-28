@@ -91,19 +91,6 @@ class MainScene extends Scene {
       ),
     );
 
-    // Create stop button
-    this.add(
-      new Button(
-        firstButtonPos.add(vec(buttonWidth * 2, 0)),
-        Resources.StopBtn,
-        () => {
-          engine.songStop();
-        },
-        Resources.StopOffBtn,
-        () => engine.getPlaybackPosition() === 0 && !engine.isPlaying(),
-      ),
-    );
-
     // Create drums button
     const drumsBtn = new Button(
       firstButtonPos.add(vec(buttonWidth * 3, 0)),
@@ -125,6 +112,20 @@ class MainScene extends Scene {
       },
     );
     this.add(drumsBtn);
+
+    // Create stop button
+    this.add(
+      new Button(
+        firstButtonPos.add(vec(buttonWidth * 2, 0)),
+        Resources.StopBtn,
+        () => {
+          engine.songStop();
+          drumsBtn.graphics.use(Sprite.from(Resources.DrumsBtn));
+        },
+        Resources.StopOffBtn,
+        () => engine.getPlaybackPosition() === 0 && !engine.isPlaying(),
+      ),
+    );
 
     // exit button
     this.add(
