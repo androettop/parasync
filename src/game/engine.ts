@@ -51,10 +51,8 @@ class Game extends Engine {
     this.songAudioManager?.pause();
   }
 
-  public songSeek(progress: number) {
-    if (this.songAudioManager) {
-      this.songAudioManager.position = progress * this.getDuration();
-    }
+  public songSeek(_progress: number) {
+    // TODO: to be implemented, seek in streamings is suuuuuper slow
   }
 
   public hasDrums() {
