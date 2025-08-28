@@ -112,8 +112,8 @@ class Game extends Engine {
 
   onPreUpdate(_engine: Engine, delta: number): void {
     // HACK: The data sync between rust/js is very slow, so the delta time is used to estimate the position
-    this.songTracks.forEach((songTrack) => songTrack.estimatePosition(delta/1000));
-    this.drumTracks.forEach((drumTrack) => drumTrack.estimatePosition(delta/1000));
+    this.songTracks.forEach((songTrack) => songTrack.estimatePosition(delta));
+    this.drumTracks.forEach((drumTrack) => drumTrack.estimatePosition(delta));
   }
 
   onInitialize(engine: Engine): void {
