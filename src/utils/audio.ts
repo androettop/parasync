@@ -15,6 +15,7 @@ export class RustAudio {
 
   constructor(id: number) {
     this._id = id;
+    this.updateStatus();
     this._updateInterval = setInterval(() => this.updateStatus(), 3000);
   }
 
@@ -26,33 +27,33 @@ export class RustAudio {
   }
 
   async play(): Promise<void> {
+    this._playing = true;
     await window.__TAURI_INTERNALS__.invoke("play_audio", {
       id: this._id,
     } as any);
-    this._playing = true;
   }
 
   async pause(): Promise<void> {
+    this._playing = false;
     await window.__TAURI_INTERNALS__.invoke("pause_audio", {
       id: this._id,
     } as any);
-    this._playing = false;
   }
 
   async stop(): Promise<void> {
+    this._playing = false;
+    this._position = 0;
     await window.__TAURI_INTERNALS__.invoke("stop_audio", {
       id: this._id,
     } as any);
-    this._playing = false;
-    this._position = 0;
   }
 
   async seek(position: number): Promise<void> {
+    this._position = position;
     await window.__TAURI_INTERNALS__.invoke("seek_audio", {
       id: this._id,
       position,
     } as any);
-    this._position = position;
   }
 
   async unload(): Promise<void> {
@@ -70,6 +71,8 @@ export class RustAudio {
       "get_audio_status",
       { id: this._id } as any
     );
+
+    console.log("Audio status:", status);
     this._position = status.position;
     this._duration = status.duration;
     this._playing = status.playing;
@@ -123,7 +126,8 @@ export class RustAudio {
 
   estimatePosition(deltaTime: number): void {
     if (this._playing) {
-      this._position += deltaTime;
+      // deltaTime probablemente viene en milisegundos, convertir a segundos
+      this._position += deltaTime / 1000;
     }
   }
 }
