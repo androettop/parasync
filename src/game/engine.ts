@@ -94,6 +94,7 @@ class Game extends Engine {
       this.song.audioFileData.drumTracks.map(
         (trackName) => `${this.songDirPath}/${trackName}`,
       ),
+      this.song.recordingMetadata.length,
     );
 
     this.cover = new ImageFile(
