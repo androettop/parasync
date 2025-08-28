@@ -28,33 +28,33 @@ export class RustAudio {
   }
 
   async play(): Promise<void> {
-    this._playing = true;
     await window.__TAURI_INTERNALS__.invoke("play_audio", {
       id: this._id,
     } as any);
+    this._playing = true;
   }
 
   async pause(): Promise<void> {
-    this._playing = false;
     await window.__TAURI_INTERNALS__.invoke("pause_audio", {
       id: this._id,
     } as any);
+    this._playing = false;
   }
 
   async stop(): Promise<void> {
-    this._playing = false;
-    this._position = 0;
     await window.__TAURI_INTERNALS__.invoke("stop_audio", {
       id: this._id,
     } as any);
+    this._playing = false;
+    this._position = 0;
   }
 
   async seek(position: number): Promise<void> {
-    this._position = position;
     await window.__TAURI_INTERNALS__.invoke("seek_audio", {
       id: this._id,
       position,
     } as any);
+    this._position = position;
   }
 
   async unload(): Promise<void> {
