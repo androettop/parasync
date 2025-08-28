@@ -14,10 +14,7 @@ class Highway extends Actor {
   instruments: string[] = [];
   lastBatchNumber: number = -1;
 
-  constructor(
-    notes: Record<number, ProcessedNote[]>,
-    instruments: string[],
-  ) {
+  constructor(notes: Record<number, ProcessedNote[]>, instruments: string[]) {
     super({
       pos: vec(GAME_CONFIG.width / 2 - GAME_CONFIG.highwayWidth / 2, 0),
       width: GAME_CONFIG.highwayWidth,
@@ -32,21 +29,28 @@ class Highway extends Actor {
   public onPostUpdate(engine: Game, elapsed: number): void {
     super.onPostUpdate(engine, elapsed);
 
+    const audioDelay = Number(localStorage.getItem("audio-delay") || 0);
+
     const notesDelay =
       (GAME_CONFIG.highwayHeight - GAME_CONFIG.dividerPosition) /
-      GAME_CONFIG.notesSpeed /
-      1000; // px/s
+        GAME_CONFIG.notesSpeed /
+        1000 +
+      audioDelay / 1000; // px/s
 
     const currentTime =
-      (engine.getPlaybackPosition() || 0) + notesDelay;
+      (engine.getPlaybackPosition() || 0) +
+      notesDelay +
+      GAME_CONFIG.notesBatchSize / 2;
 
     const batchNumber = getBatchNumber(currentTime);
 
     if (batchNumber !== this.lastBatchNumber) {
       this.lastBatchNumber = batchNumber;
-      const notes = this.notes[batchNumber];
-      if (notes) {
-        notes.forEach((note) => {
+
+      // Load current batch
+      const currentNotes = this.notes[batchNumber];
+      if (currentNotes) {
+        currentNotes.forEach((note) => {
           this.addChild(createNoteActor(note));
         });
       }

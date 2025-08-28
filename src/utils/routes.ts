@@ -1,6 +1,6 @@
 import {
   MusicNote as MusicNoteIcon,
-  Settings as SettingsIcon,
+  Settings as SettingsIcon
 } from "@mui/icons-material";
 import DownloadIcon from "@mui/icons-material/Download";
 import MySongsPage from "../pages/MySongsPage/MySongsPage";
