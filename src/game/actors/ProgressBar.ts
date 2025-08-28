@@ -42,22 +42,23 @@ class ProgressBar extends Actor {
 
     this.addChild(this.progressBarActor);
 
-    this.on("pointerdown", (event) => {
-      const posX = this.getRelativeX(event.screenPos.x);
-      const progress = Math.min(posX / GAME_CONFIG.highwayWidth, 1);
-      engine.songPause();
-      engine.songSeek(progress);
-    });
+    // TODO: enable seek when it's faster
+    // this.on("pointerdown", (event) => {
+    //   const posX = this.getRelativeX(event.screenPos.x);
+    //   const progress = Math.min(posX / GAME_CONFIG.highwayWidth, 1);
+    //   engine.songPause();
+    //   engine.songSeek(progress);
+    // });
 
-    this.on("pointerdragmove", (event) => {
-      const posX = this.getRelativeX(event.screenPos.x);
-      const progress = Math.min(posX / GAME_CONFIG.highwayWidth, 1);
-      engine.songSeek(progress);
-    });
+    // this.on("pointerdragmove", (event) => {
+    //   const posX = this.getRelativeX(event.screenPos.x);
+    //   const progress = Math.min(posX / GAME_CONFIG.highwayWidth, 1);
+    //   engine.songSeek(progress);
+    // });
 
-    this.on("pointerup", () => {
-      engine.songPlay();
-    });
+    // this.on("pointerup", () => {
+    //   engine.songPlay();
+    // });
   }
 }
 

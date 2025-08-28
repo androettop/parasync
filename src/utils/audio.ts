@@ -32,12 +32,6 @@ export class SongAudioManager implements Loadable<{}> {
     return this._isPlaying;
   }
 
-  set position(value: number) {
-    this._position = value;
-    // pedir seek al backend
-    window.__TAURI_INTERNALS__.invoke("seek_audio", { seconds: value } as any);
-  }
-
   async load() {
     this._isLoaded = false;
     const allPaths = [...this.songTrackPaths, ...this.drumsTrackPaths];
@@ -57,7 +51,7 @@ export class SongAudioManager implements Loadable<{}> {
   async play() {
     await window.__TAURI_INTERNALS__.invoke("play_audio");
     clearInterval(this._interval);
-    this._interval = window.setInterval(() => this.refreshStatus(), 32);
+    //this._interval = window.setInterval(() => this.refreshStatus(), 32);
     this._isPlaying = true;
   }
 
