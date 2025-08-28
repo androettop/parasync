@@ -169,23 +169,27 @@ fn run_audio_player(
                 continue;
             }
             
-            // Decodificar audio si es necesario
-            if decode_audio_chunk(
-                &decoder_path,
-                &buffer_clone,
-                &pos_clone,
-                &seek_clone,
-                &target_clone,
-                &decoder_volume,
-                sample_rate,
-            ).is_err() {
-                break;
+            // Solo decodificar si el buffer está bajo
+            let buffer_size = buffer_clone.lock().unwrap().len();
+            if buffer_size < 8192 { // Mantener al menos 8192 samples en buffer
+                if decode_audio_chunk(
+                    &decoder_path,
+                    &buffer_clone,
+                    &pos_clone,
+                    &seek_clone,
+                    &target_clone,
+                    &decoder_volume,
+                    sample_rate,
+                ).is_err() {
+                    break;
+                }
             }
             
             // Actualizar posición
             *decoder_position.lock().unwrap() = *pos_clone.lock().unwrap();
             
-            thread::sleep(Duration::from_millis(1));
+            // Sleep más corto para mejor responsividad
+            thread::sleep(Duration::from_millis(5));
         }
     });
     
@@ -198,10 +202,27 @@ fn run_audio_player(
                 let current_volume = *volume_clone.lock().unwrap();
                 let is_playing = *playing_clone.lock().unwrap();
                 
-                for sample in data.iter_mut() {
-                    if is_playing && !buffer.is_empty() {
-                        *sample = buffer.remove(0) * current_volume;
-                    } else {
+                if is_playing && buffer.len() >= data.len() {
+                    // Copiar datos en bloque si hay suficientes samples
+                    for (i, sample) in data.iter_mut().enumerate() {
+                        *sample = buffer[i] * current_volume;
+                    }
+                    // Remover los samples usados
+                    buffer.drain(0..data.len());
+                } else if is_playing && !buffer.is_empty() {
+                    // Si no hay suficientes samples, llenar lo que se pueda
+                    let available = buffer.len().min(data.len());
+                    for i in 0..available {
+                        data[i] = buffer[i] * current_volume;
+                    }
+                    // Llenar el resto con silencio
+                    for i in available..data.len() {
+                        data[i] = 0.0;
+                    }
+                    buffer.drain(0..available);
+                } else {
+                    // Silencio si no está reproduciendo
+                    for sample in data.iter_mut() {
                         *sample = 0.0;
                     }
                 }
@@ -274,8 +295,8 @@ fn decode_audio_chunk(
         *seek_requested.lock().unwrap() = false;
     }
     
-    // Decodificar algunos packets
-    for _ in 0..10 { // Decodificar hasta 10 packets por llamada
+    // Decodificar más packets para llenar el buffer
+    for _ in 0..50 { // Aumentar de 10 a 50 packets por llamada
         let packet = match format.next_packet() {
             Ok(p) => p,
             Err(_) => break,
