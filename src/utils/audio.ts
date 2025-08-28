@@ -5,6 +5,8 @@ export type AudioStatus = {
   volume: number;
 };
 
+const audioCache: Record<string, RustAudio> = {};
+
 export class RustAudio {
   private _id: number;
   private _position: number = 0;
@@ -13,18 +15,21 @@ export class RustAudio {
   private _volume: number = 1.0;
   private _updateInterval: number | null = null;
 
-  constructor(id: number) {
-    this._id = id;
-    this.updateStatus();
+  constructor() {
     // Escuchar eventos de posición emitidos por Rust
-    
   }
 
   static async load(path: string): Promise<RustAudio> {
+    if (audioCache[path]) {
+      return audioCache[path];
+    }
+    audioCache[path] = new RustAudio();
     const id = await window.__TAURI_INTERNALS__.invoke("load_audio", {
       path,
     } as any);
-    return new RustAudio(id);
+    audioCache[path]._id = id;
+    audioCache[path].updateStatus();
+    return audioCache[path];
   }
 
   async play(): Promise<void> {
@@ -70,7 +75,7 @@ export class RustAudio {
   async updateStatus(): Promise<void> {
     const status: AudioStatus = await window.__TAURI_INTERNALS__.invoke(
       "get_audio_status",
-      { id: this._id } as any
+      { id: this._id } as any,
     );
     this._duration = status.duration;
   }
