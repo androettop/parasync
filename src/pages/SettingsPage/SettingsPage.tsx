@@ -17,10 +17,10 @@ import { SongRepository } from "../../utils/api";
 const SettingsPage = () => {
   const [savedConfig, setSavedConfig] = useLocalStorage<RepoConfig | null>(
     "yaml-config",
-    null,
+    null
   );
   const [yamlText, setYamlText] = useState(
-    stringifyYaml(savedConfig || {}, { indent: 2 }),
+    stringifyYaml(savedConfig || {}, { indent: 2 })
   );
   const [parseError, setParseError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -45,10 +45,48 @@ const SettingsPage = () => {
       setParseError(null);
     } catch (error) {
       setParseError(
-        `Invalid configuration format. Please check your settings and try again.`,
+        `Invalid configuration format. Please check your settings and try again.`
       );
       setSuccessMessage(null);
     }
+  };
+
+  const handleLoadSampleData = () => {
+    const sampleData = `display_name: ParaDB (api 2025-03-03)
+name: paradb
+
+search_url: |
+  ~'https://paradb.net/api/maps?' ||
+  'query=' || encodeURIComponent(query) ||
+  '&limit=' || pageSize ||
+  '&offset=' || ((page - 1) * pageSize) ||
+  '&sort=' || 
+  case(
+    sortBy,
+    ['uploadedAt', 'title', 'artist', 'uploadedBy', 'downloads'],
+    ['submissionDate', 'title', 'artist', 'author', 'downloadCount']
+  ) ||
+  '&sortDirection=' || sortDirection
+response:
+  songs_array: ~response.maps
+  serializer: msgpackr
+  fields:
+    id: ~song.id
+    uploadedAt: ~song.submissionDate
+    uploadedBy: ~song.author
+    title: ~song.title
+    artist: ~song.artist
+    downloads: ~song.downloadCount
+    coverUrl: ~'https://paradb.net/covers/' || song.id || '/' || song.albumArt
+    downloadUrl: ~'https://maps.paradb.net/maps/' || song.id || '.zip'
+    difficulties: |
+      ~
+      map(
+        getFn('difficultyName'),
+        song.difficulties
+      )
+`.trim();
+    setYamlText(sampleData);
   };
 
   return (
@@ -74,6 +112,10 @@ const SettingsPage = () => {
             </Typography>
 
             <Stack spacing={2}>
+              <Button variant="contained" onClick={handleLoadSampleData}>
+                Load sample data (paradb.net)
+              </Button>
+
               {/* Text Area */}
               <Editor
                 defaultLanguage="yaml"
