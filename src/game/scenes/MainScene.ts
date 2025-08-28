@@ -120,7 +120,9 @@ class MainScene extends Scene {
         Resources.StopBtn,
         () => {
           engine.songStop();
-          drumsBtn.graphics.use(Sprite.from(Resources.DrumsBtn));
+          if (engine.hasDrums()) {
+            drumsBtn.graphics.use(Sprite.from(Resources.DrumsBtn));
+          }
         },
         Resources.StopOffBtn,
         () => engine.getPlaybackPosition() === 0 && !engine.isPlaying(),
