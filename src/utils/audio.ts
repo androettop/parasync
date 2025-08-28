@@ -1,14 +1,11 @@
 export type AudioStatus = {
-  position: number;
   duration: number;
-  playing: boolean;
-  volume: number;
 };
 
 const audioCache: Record<string, RustAudio> = {};
 
 export class RustAudio {
-  private _id: number;
+  private _id: number = -1;
   private _position: number = 0;
   private _duration: number = 0;
   private _playing: boolean = false;

@@ -28,7 +28,8 @@ tauri-plugin-dialog = "2"
 tauri-plugin-os = "2"
 tokio = { version = "1.0", features = ["full"] }
 once_cell = "1.19"
-playback-rs = "0.4.4"
+phonic = "0.7.1"
+crossbeam-channel = "0.5"
 
 # Android specific linker configuration
 [target.'cfg(target_os = "android")'.dependencies]

@@ -1,204 +1,329 @@
-// Audio backend implementation using playback_rs
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
-use std::{
-    collections::HashMap,
-    path::PathBuf,
-    sync::{Arc, Mutex},
-    time::Duration,
+use phonic::{
+    DefaultOutputDevice, FilePlaybackOptions, Player, PlaybackId,
+    PlaybackStatusEvent, OutputDevice,
 };
-use once_cell::sync::Lazy;
-use serde::Serialize;
-use playback_rs::{Player, Song};
+use crossbeam_channel;
+use serde::{Deserialize, Serialize};
+use tauri::State;
 
-type AudioId = u32;
+pub type AudioId = u32;
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AudioStatus {
+    pub duration: Option<f64>, // Duration in seconds
+}
+
+// Track metadata and phonic playback ID mapping
 struct AudioTrack {
-    path: PathBuf,
+    file_path: String,
+    phonic_id: PlaybackId,
+    duration: Option<Duration>,
+}
+
+// Global audio manager using phonic
+pub struct AudioManager {
     player: Arc<Mutex<Player>>,
-    duration: f64,
-    song: Arc<Mutex<Option<Song>>>, // Cargar solo cuando sea necesario
-}
-
-unsafe impl Send for AudioTrack {}
-unsafe impl Sync for AudioTrack {}
-
-impl AudioTrack {
-    fn new(path: PathBuf) -> Result<Self, String> {
-        // Solo crear el player, NO cargar el audio todavía
-        let player = Player::new(None)
-            .map_err(|e| format!("Failed to create player: {}", e))?;
-        
-        // Retornar duración estimada muy rápidamente (la real se obtiene después)
-        let duration = 180.0; // Valor por defecto temporal
-        
-        println!("Initialized audio track: {:?} (fast load)", path);
-        
-        Ok(Self {
-            path: path.clone(),
-            player: Arc::new(Mutex::new(player)),
-            duration,
-            song: Arc::new(Mutex::new(None)), // Sin cargar todavía
-        })
-    }
-    
-    fn play(&self) -> Result<(), String> {
-        let player = self.player.lock().unwrap();
-        
-        // Cargar la canción si no está cargada todavía
-        let mut song_opt = self.song.lock().unwrap();
-        if song_opt.is_none() {
-            println!("Loading audio file: {:?}", self.path);
-            let song = Song::from_file(&self.path, None)
-                .map_err(|e| format!("Failed to load song: {}", e))?;
-            *song_opt = Some(song);
-            println!("Audio file loaded successfully");
-        }
-        
-        let song_ref = song_opt.as_ref().unwrap();
-        
-        // Si no hay canción actual, cargar la nuestra
-        if !player.has_current_song() {
-            if player.has_next_song() {
-                // Si hay una canción en queue, reproducirla primero
-                player.skip();
-            } else {
-                // Cargar nuestra canción
-                player.play_song_next(song_ref, None)
-                    .map_err(|e| format!("Failed to queue song: {}", e))?;
-                player.skip(); // Saltar a la canción que acabamos de cargar
-            }
-        }
-        
-        player.set_playing(true);
-        Ok(())
-    }
-    
-    fn pause(&self) -> Result<(), String> {
-        let player = self.player.lock().unwrap();
-        player.set_playing(false);
-        Ok(())
-    }
-    
-    fn stop(&self) -> Result<(), String> {
-        let player = self.player.lock().unwrap();
-        player.set_playing(false);
-        // Reiniciar posición al inicio
-        player.seek(Duration::from_secs(0));
-        Ok(())
-    }
-    
-    fn seek(&self, position: f64) -> Result<(), String> {
-        let player = self.player.lock().unwrap();
-        let duration = Duration::from_secs_f64(position);
-        player.seek(duration);
-        Ok(())
-    }
-    
-    fn set_volume(&self, _volume: f32) -> Result<(), String> {
-        // playback_rs no parece tener control de volumen built-in
-        // Por ahora retornar Ok, se podría implementar multiplicando samples
-        Ok(())
-    }
-    
-    fn get_position(&self) -> f64 {
-        let player = self.player.lock().unwrap();
-        player.get_playback_position()
-            .map(|(current, _total)| current.as_secs_f64())
-            .unwrap_or(0.0)
-    }
-}
-
-struct AudioManager {
-    tracks: Mutex<HashMap<AudioId, AudioTrack>>,
-    next_id: Mutex<AudioId>,
+    tracks: Arc<Mutex<HashMap<AudioId, AudioTrack>>>,
+    next_id: Arc<Mutex<AudioId>>,
+    playback_status_receiver: Option<crossbeam_channel::Receiver<PlaybackStatusEvent>>,
 }
 
 impl AudioManager {
-    fn new() -> Self {
-        Self {
-            tracks: Mutex::new(HashMap::new()),
-            next_id: Mutex::new(1),
-        }
+    pub fn new() -> Result<Self, String> {
+        println!("[AUDIO] Creating new AudioManager with phonic");
+        
+        // Open the default audio device
+        let device = DefaultOutputDevice::open()
+            .map_err(|e| format!("Failed to open default audio device: {}", e))?;
+        
+        println!("[AUDIO] Default audio device opened successfully");
+        
+        // Create a channel to receive playback status events
+        let (playback_status_sender, playback_status_receiver) = crossbeam_channel::bounded(32);
+        
+        // Create the player
+        let player = Player::new(device.sink(), Some(playback_status_sender));
+        
+        let manager = AudioManager {
+            player: Arc::new(Mutex::new(player)),
+            tracks: Arc::new(Mutex::new(HashMap::new())),
+            next_id: Arc::new(Mutex::new(1)),
+            playback_status_receiver: Some(playback_status_receiver),
+        };
+        
+        println!("[AUDIO] AudioManager created successfully with phonic");
+        Ok(manager)
     }
 
     fn get_next_id(&self) -> AudioId {
         let mut id = self.next_id.lock().unwrap();
         let current = *id;
         *id += 1;
+        println!("[AUDIO] Generated new ID: {}", current);
         current
     }
 }
 
-static AUDIO_MANAGER: Lazy<AudioManager> = Lazy::new(AudioManager::new);
+// Use the same state type for compatibility
+type AudioManagerState = Arc<Mutex<AudioManager>>;
 
 #[tauri::command]
-pub fn load_audio(path: String) -> Result<AudioId, String> {
-    let id = AUDIO_MANAGER.get_next_id();
-    let pathbuf = PathBuf::from(path);
-    let track = AudioTrack::new(pathbuf)?;
+pub fn load_audio(
+    path: String,
+    audio_manager: State<AudioManagerState>,
+) -> Result<AudioId, String> {
+    println!("[AUDIO] load_audio called with path: {}", path);
     
-    AUDIO_MANAGER.tracks.lock().unwrap().insert(id, track);
+    let manager = audio_manager.lock().unwrap();
+    let mut player = manager.player.lock().unwrap();
+    
+    // Play the file with default options (preloaded for better seeking support)
+    let phonic_id = player
+        .play_file(&path, FilePlaybackOptions::default())
+        .map_err(|e| {
+            let error_msg = format!("Failed to load audio file '{}': {}", path, e);
+            println!("[AUDIO] ERROR: {}", error_msg);
+            error_msg
+        })?;
+    
+    println!("[AUDIO] File loaded successfully with phonic ID: {}", phonic_id);
+    
+    // Immediately stop the file since we just want to load it
+    if let Err(e) = player.stop_source(phonic_id) {
+        println!("[AUDIO] WARNING: Failed to stop source after loading: {}", e);
+    } else {
+        println!("[AUDIO] Source stopped after loading");
+    }
+    
+    let id = manager.get_next_id();
+    println!("[AUDIO] Generated audio ID: {}", id);
+    
+    // For now, we don't have easy access to duration from phonic
+    // This could be implemented by loading file metadata separately
+    let track = AudioTrack {
+        file_path: path.clone(),
+        phonic_id,
+        duration: None, // TODO: Get duration from file metadata
+    };
+    
+    // Store the track metadata
+    manager.tracks.lock().unwrap().insert(id, track);
+    println!("[AUDIO] Track metadata stored for ID: {}", id);
+    
+    println!("[AUDIO] load_audio completed successfully. ID: {}", id);
     Ok(id)
 }
 
 #[tauri::command]
-pub fn play_audio(id: AudioId) -> Result<(), String> {
-    let tracks = AUDIO_MANAGER.tracks.lock().unwrap();
-    let track = tracks.get(&id).ok_or("Audio not loaded")?;
-    track.play()
-}
-
-#[tauri::command]
-pub fn pause_audio(id: AudioId) -> Result<(), String> {
-    let tracks = AUDIO_MANAGER.tracks.lock().unwrap();
-    let track = tracks.get(&id).ok_or("Audio not loaded")?;
-    track.pause()
-}
-
-#[tauri::command]
-pub fn stop_audio(id: AudioId) -> Result<(), String> {
-    let tracks = AUDIO_MANAGER.tracks.lock().unwrap();
-    let track = tracks.get(&id).ok_or("Audio not loaded")?;
-    track.stop()
-}
-
-#[tauri::command]
-pub fn seek_audio(id: AudioId, position: f64) -> Result<(), String> {
-    let tracks = AUDIO_MANAGER.tracks.lock().unwrap();
-    let track = tracks.get(&id).ok_or("Audio not loaded")?;
-    track.seek(position)
-}
-
-#[tauri::command]
-pub fn set_volume(id: AudioId, volume: f32) -> Result<(), String> {
-    let tracks = AUDIO_MANAGER.tracks.lock().unwrap();
-    let track = tracks.get(&id).ok_or("Audio not loaded")?;
-    track.set_volume(volume)
-}
-
-#[derive(Serialize, Clone)]
-pub struct AudioStatus {
-    position: f64,
-    duration: f64,
-}
-
-#[tauri::command]
-pub fn get_audio_status(id: AudioId) -> Result<AudioStatus, String> {
-    let tracks = AUDIO_MANAGER.tracks.lock().unwrap();
-    let track = tracks.get(&id).ok_or("Audio not loaded")?;
+pub fn play_audio(
+    id: AudioId,
+    audio_manager: State<AudioManagerState>,
+) -> Result<(), String> {
+    println!("[AUDIO] play_audio called with ID: {}", id);
     
-    Ok(AudioStatus {
-        position: track.get_position(),
-        duration: track.duration,
-    })
+    let manager = audio_manager.lock().unwrap();
+    let tracks = manager.tracks.lock().unwrap();
+    
+    if let Some(track) = tracks.get(&id) {
+        println!("[AUDIO] Found track for ID: {}, file: {}", id, track.file_path);
+        
+        let mut player = manager.player.lock().unwrap();
+        
+        // Since phonic doesn't have pause/resume for individual tracks easily,
+        // we'll need to play the file again
+        let new_phonic_id = player
+            .play_file(&track.file_path, FilePlaybackOptions::default())
+            .map_err(|e| {
+                let error_msg = format!("Failed to play audio file '{}': {}", track.file_path, e);
+                println!("[AUDIO] ERROR: {}", error_msg);
+                error_msg
+            })?;
+        
+        println!("[AUDIO] File playing with new phonic ID: {}", new_phonic_id);
+        println!("[AUDIO] play_audio completed successfully for ID: {}", id);
+        Ok(())
+    } else {
+        let error_msg = format!("Audio track with id {} not found", id);
+        println!("[AUDIO] ERROR: {}", error_msg);
+        let track_ids: Vec<_> = tracks.keys().collect();
+        println!("[AUDIO] Available track IDs: {:?}", track_ids);
+        Err(error_msg)
+    }
 }
 
 #[tauri::command]
-pub fn unload_audio(id: AudioId) -> Result<(), String> {
-    let mut tracks = AUDIO_MANAGER.tracks.lock().unwrap();
+pub fn pause_audio(
+    id: AudioId,
+    audio_manager: State<AudioManagerState>,
+) -> Result<(), String> {
+    println!("[AUDIO] pause_audio called with ID: {}", id);
+    
+    let manager = audio_manager.lock().unwrap();
+    let tracks = manager.tracks.lock().unwrap();
+    
     if let Some(track) = tracks.get(&id) {
-        let _ = track.stop();
+        println!("[AUDIO] Found track for ID: {}, attempting to stop", id);
+        
+        let mut player = manager.player.lock().unwrap();
+        
+        // Phonic doesn't have pause, so we'll stop the source
+        if let Err(e) = player.stop_source(track.phonic_id) {
+            println!("[AUDIO] WARNING: Failed to stop source: {}", e);
+        } else {
+            println!("[AUDIO] Source stopped successfully");
+        }
+        
+        println!("[AUDIO] pause_audio completed successfully for ID: {}", id);
+        Ok(())
+    } else {
+        let error_msg = format!("Audio track with id {} not found", id);
+        println!("[AUDIO] ERROR: {}", error_msg);
+        Err(error_msg)
     }
-    tracks.remove(&id);
-    Ok(())
+}
+
+#[tauri::command]
+pub fn stop_audio(
+    id: AudioId,
+    audio_manager: State<AudioManagerState>,
+) -> Result<(), String> {
+    println!("[AUDIO] stop_audio called with ID: {}", id);
+    
+    let manager = audio_manager.lock().unwrap();
+    let tracks = manager.tracks.lock().unwrap();
+    
+    if let Some(track) = tracks.get(&id) {
+        println!("[AUDIO] Found track for ID: {}, calling stop", id);
+        
+        let mut player = manager.player.lock().unwrap();
+        
+        if let Err(e) = player.stop_source(track.phonic_id) {
+            println!("[AUDIO] WARNING: Failed to stop source: {}", e);
+        } else {
+            println!("[AUDIO] Source stopped successfully");
+        }
+        
+        println!("[AUDIO] stop_audio completed successfully for ID: {}", id);
+        Ok(())
+    } else {
+        let error_msg = format!("Audio track with id {} not found", id);
+        println!("[AUDIO] ERROR: {}", error_msg);
+        Err(error_msg)
+    }
+}
+
+#[tauri::command]
+pub fn seek_audio(
+    id: AudioId,
+    position: f64,
+    audio_manager: State<AudioManagerState>,
+) -> Result<(), String> {
+    println!("[AUDIO] seek_audio called with ID: {}, position: {}", id, position);
+    
+    let manager = audio_manager.lock().unwrap();
+    let tracks = manager.tracks.lock().unwrap();
+    
+    if let Some(track) = tracks.get(&id) {
+        println!("[AUDIO] Found track for ID: {}, attempting to seek", id);
+        
+        let mut player = manager.player.lock().unwrap();
+        
+        let seek_duration = Duration::from_secs_f64(position);
+        
+        if let Err(e) = player.seek_source(track.phonic_id, seek_duration) {
+            let error_msg = format!("Failed to seek audio track {}: {}", id, e);
+            println!("[AUDIO] ERROR: {}", error_msg);
+            Err(error_msg)
+        } else {
+            println!("[AUDIO] Seek successful to position: {}", position);
+            println!("[AUDIO] seek_audio completed successfully for ID: {}", id);
+            Ok(())
+        }
+    } else {
+        let error_msg = format!("Audio track with id {} not found", id);
+        println!("[AUDIO] ERROR: {}", error_msg);
+        Err(error_msg)
+    }
+}
+
+#[tauri::command]
+pub fn set_volume(
+    id: AudioId,
+    volume: f32,
+    _audio_manager: State<AudioManagerState>,
+) -> Result<(), String> {
+    println!("[AUDIO] set_volume called with ID: {}, volume: {}", id, volume);
+    
+    // Phonic doesn't have per-source volume control in the simple API
+    // This would require using FilePlaybackOptions with volume_db when playing
+    // For now, we'll return an error indicating this limitation
+    let error_msg = format!(
+        "Per-source volume control not implemented. Volume {} requested for track {}",
+        volume, id
+    );
+    println!("[AUDIO] ERROR: {}", error_msg);
+    Err(error_msg)
+}
+
+#[tauri::command]
+pub fn get_audio_status(
+    id: AudioId,
+    audio_manager: State<AudioManagerState>,
+) -> Result<AudioStatus, String> {
+    println!("[AUDIO] get_audio_status called with ID: {}", id);
+    
+    let manager = audio_manager.lock().unwrap();
+    let tracks = manager.tracks.lock().unwrap();
+    
+    if let Some(track) = tracks.get(&id) {
+        let duration = track.duration.map(|d| d.as_secs_f64());
+        println!("[AUDIO] Found track for ID: {}, duration: {:?}", id, duration);
+        
+        let status = AudioStatus {
+            duration,
+        };
+        println!("[AUDIO] get_audio_status completed successfully for ID: {}", id);
+        Ok(status)
+    } else {
+        let error_msg = format!("Audio track with id {} not found", id);
+        println!("[AUDIO] ERROR: {}", error_msg);
+        let track_ids: Vec<_> = tracks.keys().collect();
+        println!("[AUDIO] Available track IDs: {:?}", track_ids);
+        Err(error_msg)
+    }
+}
+
+#[tauri::command]
+pub fn unload_audio(
+    id: AudioId,
+    audio_manager: State<AudioManagerState>,
+) -> Result<(), String> {
+    println!("[AUDIO] unload_audio called with ID: {}", id);
+    
+    let manager = audio_manager.lock().unwrap();
+    let mut tracks = manager.tracks.lock().unwrap();
+    
+    if let Some(track) = tracks.remove(&id) {
+        println!("[AUDIO] Removed track for ID: {}", id);
+        
+        let mut player = manager.player.lock().unwrap();
+        
+        // Stop the source if it's still playing
+        if let Err(e) = player.stop_source(track.phonic_id) {
+            println!("[AUDIO] WARNING: Failed to stop source during unload: {}", e);
+        } else {
+            println!("[AUDIO] Source stopped during unload");
+        }
+        
+        println!("[AUDIO] unload_audio completed successfully for ID: {}", id);
+        Ok(())
+    } else {
+        let error_msg = format!("Audio track with id {} not found", id);
+        println!("[AUDIO] ERROR: {}", error_msg);
+        Err(error_msg)
+    }
 }
