@@ -6,7 +6,7 @@ import {
   ScrollPreventionMode,
 } from "excalibur";
 import { ParadiddleSong } from "../types/songs";
-import { RustAudio } from "../utils/audio";
+import { SongAudioManager } from "../utils/audio";
 import { GAME_CONFIG } from "./config";
 import { releaseFileUrl } from "./helpers/filesLoader";
 import { applyBlur } from "./helpers/imageEffects";
@@ -17,8 +17,7 @@ import MainScene from "./scenes/MainScene";
 class Game extends Engine {
   song: ParadiddleSong;
   songDirPath: string;
-  songTracks: RustAudio[] = [];
-  drumTracks: RustAudio[] = [];
+  songAudioManager: SongAudioManager | null = null;
   cover: ImageSource | null = null;
   coverBg: ImageSource | null = null;
   exitHandler: () => void;
@@ -45,60 +44,55 @@ class Game extends Engine {
   }
 
   public songPlay() {
-    [...this.songTracks, ...this.drumTracks].forEach((track) => {
-      track.play();
-    });
+    this.songAudioManager?.play();
   }
 
   public songPause() {
-    [...this.songTracks, ...this.drumTracks].forEach((track) => {
-      track.pause();
-    });
+    this.songAudioManager?.pause();
   }
 
   public songSeek(progress: number) {
-    [...this.songTracks, ...this.drumTracks].forEach((track) => {
-      track.seek(progress * (track.duration || 0));
-    });
+    if (this.songAudioManager) {
+      this.songAudioManager.position = progress * this.getDuration();
+    }
   }
 
   public hasDrums() {
-    return this.drumTracks.length > 0;
+    return this.song.audioFileData.drumTracks.length > 0;
   }
 
   public areDrumsMuted() {
-    return this.drumTracks?.[0]?.volume === 0;
+    // TODO: implement this.
+    return false;
   }
 
   public muteDrums() {
-    this.drumTracks.forEach((track) => (track.volume = 0));
+    // TODO: implement this.
   }
 
   public unmuteDrums() {
-    this.drumTracks.forEach((track) => (track.volume = 1));
+    // TODO: implemenmt this.
   }
 
   public getPlaybackPosition() {
-    return this.songTracks[0].position;
+    return this.songAudioManager?.position || 0;
   }
 
   public getDuration() {
-    return this.songTracks[0].duration || 1;
+    return this.songAudioManager?.duration || 0;
   }
 
   public isPlaying() {
-    return this.songTracks[0].playing;
+    return this.songAudioManager?.isPlaying || false;
   }
 
   async initialize() {
-    this.songTracks = await Promise.all(
-      this.song.audioFileData.songTracks.map(async (trackName) =>
-        RustAudio.load(`${this.songDirPath}/${trackName}`),
+    this.songAudioManager = new SongAudioManager(
+      this.song.audioFileData.songTracks.map(
+        (trackName) => `${this.songDirPath}/${trackName}`,
       ),
-    );
-    this.drumTracks = await Promise.all(
-      this.song.audioFileData.drumTracks.map(async (trackName) =>
-        RustAudio.load(`${this.songDirPath}/${trackName}`),
+      this.song.audioFileData.drumTracks.map(
+        (trackName) => `${this.songDirPath}/${trackName}`,
       ),
     );
 
@@ -109,14 +103,15 @@ class Game extends Engine {
     this.coverBg = await applyBlur(this.cover);
     this.add("main", new MainScene());
     const loader = createLoader(NotesResources);
+    loader.addResource(this.songAudioManager);
     loader.addResource(this.cover);
     loader.addResource(this.coverBg);
     this.start(loader);
   }
 
-  onPreUpdate(_engine: Engine, delta: number): void {
+  onPreUpdate(_engine: Engine, _delta: number): void {
     // HACK: The data sync between rust/js is very slow, so the delta time is used to estimate the position
-    this.songTracks?.[0].estimatePosition(delta);
+    // TODO: implement this this.songTracks?.[0].estimatePosition(delta);
   }
 
   onInitialize(engine: Engine): void {
@@ -140,8 +135,7 @@ class Game extends Engine {
     console.log("Releasing resources...");
     releaseFileUrl(this.cover?.data.src);
     releaseFileUrl(this.coverBg?.data.src);
-    this.songTracks.forEach((songTrack) => songTrack.unload());
-    this.drumTracks.forEach((drumTrack) => drumTrack.unload());
+    this.songAudioManager?.dispose();
   }
 }
 
