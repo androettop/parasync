@@ -7,7 +7,6 @@ use std::{
     sync::{Arc, Mutex, mpsc},
     thread,
     time::Duration,
-    panic,
 };
 use once_cell::sync::Lazy;
 use serde::Serialize;
@@ -115,7 +114,7 @@ fn run_audio_player(
         .ok_or("No output device available")?;
     
     let config = device.default_output_config().map_err(|e| e.to_string())?;
-    let sample_rate = config.sample_rate().0 as f64;
+    let _sample_rate = config.sample_rate().0 as f64;
     
     // Buffer compartido entre el decodificador y el stream de audio
     let audio_buffer = Arc::new(Mutex::new(Vec::<f32>::new()));
@@ -139,6 +138,15 @@ fn run_audio_player(
     let decoder_playing = playing.clone();
     
     let decoder_handle = thread::spawn(move || {
+        // Inicializar el decodificador PERSISTENTE fuera del loop
+        let mut decoder_state = match init_persistent_decoder(&decoder_path) {
+            Ok(state) => state,
+            Err(e) => {
+                eprintln!("Failed to initialize decoder: {}", e);
+                return;
+            }
+        };
+        
         loop {
             // Procesar comandos
             if let Ok(command) = command_receiver.try_recv() {
@@ -172,14 +180,13 @@ fn run_audio_player(
             // Solo decodificar si el buffer está bajo
             let buffer_size = buffer_clone.lock().unwrap().len();
             if buffer_size < 8192 { // Mantener al menos 8192 samples en buffer
-                if decode_audio_chunk(
-                    &decoder_path,
+                if decode_audio_chunk_persistent(
+                    &mut decoder_state,
                     &buffer_clone,
                     &pos_clone,
                     &seek_clone,
                     &target_clone,
                     &decoder_volume,
-                    sample_rate,
                 ).is_err() {
                     break;
                 }
@@ -240,15 +247,15 @@ fn run_audio_player(
     Ok(())
 }
 
-fn decode_audio_chunk(
-    path: &PathBuf,
-    audio_buffer: &Arc<Mutex<Vec<f32>>>,
-    current_pos: &Arc<Mutex<f64>>,
-    seek_requested: &Arc<Mutex<bool>>,
-    target_seek_pos: &Arc<Mutex<f64>>,
-    volume: &Arc<Mutex<f32>>,
-    _sample_rate: f64,
-) -> Result<(), String> {
+// Estructura para mantener el estado del decodificador persistente
+struct DecoderState {
+    format: Box<dyn symphonia::core::formats::FormatReader>,
+    decoder: Box<dyn symphonia::core::codecs::Decoder>,
+    track_id: u32,
+}
+
+// Inicializar el decodificador persistente
+fn init_persistent_decoder(path: &PathBuf) -> Result<DecoderState, String> {
     let file = File::open(path).map_err(|e| e.to_string())?;
     let mss = MediaSourceStream::new(Box::new(file), Default::default());
     
@@ -261,7 +268,7 @@ fn decode_audio_chunk(
         .format(&hint, mss, &FormatOptions::default(), &MetadataOptions::default())
         .map_err(|e| e.to_string())?;
     
-    let mut format = probed.format;
+    let format = probed.format;
     let track = format
         .tracks()
         .iter()
@@ -269,44 +276,64 @@ fn decode_audio_chunk(
         .ok_or("No audio track found")?;
     
     let track_id = track.id;
+    let spec = track.codec_params.clone();
     
     // Verificar que el track tiene la información necesaria
-    if track.codec_params.sample_rate.is_none() {
+    if spec.sample_rate.is_none() {
         return Err("Track has no sample rate information".to_string());
     }
     
-    let mut decoder = symphonia::default::get_codecs()
-        .make(&track.codec_params, &DecoderOptions::default())
+    let decoder = symphonia::default::get_codecs()
+        .make(&spec, &DecoderOptions::default())
         .map_err(|e| e.to_string())?;
     
+    Ok(DecoderState {
+        format,
+        decoder,
+        track_id,
+    })
+}
+
+// Decodificar usando el estado persistente
+fn decode_audio_chunk_persistent(
+    decoder_state: &mut DecoderState,
+    audio_buffer: &Arc<Mutex<Vec<f32>>>,
+    current_pos: &Arc<Mutex<f64>>,
+    seek_requested: &Arc<Mutex<bool>>,
+    target_seek_pos: &Arc<Mutex<f64>>,
+    volume: &Arc<Mutex<f32>>,
+) -> Result<(), String> {
     // Hacer seek si es necesario
     if *seek_requested.lock().unwrap() {
         let target_pos = *target_seek_pos.lock().unwrap();
         let seek_time = Time::from(target_pos);
         
-        if let Err(_) = format.seek(SeekMode::Accurate, SeekTo::Time { 
+        if let Err(_) = decoder_state.format.seek(SeekMode::Accurate, SeekTo::Time { 
             time: seek_time, 
-            track_id: Some(track_id) 
+            track_id: Some(decoder_state.track_id) 
         }) {
             // Si el seek falla, continuar desde donde estaba
         }
         
         *current_pos.lock().unwrap() = target_pos;
         *seek_requested.lock().unwrap() = false;
+        
+        // Limpiar el buffer después del seek
+        audio_buffer.lock().unwrap().clear();
     }
     
-    // Decodificar más packets para llenar el buffer
-    for _ in 0..50 { // Aumentar de 10 a 50 packets por llamada
-        let packet = match format.next_packet() {
+    // Decodificar múltiples packets para llenar el buffer
+    for _ in 0..20 { // Reducir de 50 a 20 para evitar llenar demasiado el buffer
+        let packet = match decoder_state.format.next_packet() {
             Ok(p) => p,
-            Err(_) => break,
+            Err(_) => break, // Final del archivo
         };
         
-        if packet.track_id() != track_id {
+        if packet.track_id() != decoder_state.track_id {
             continue;
         }
         
-        let decoded = match decoder.decode(&packet) {
+        let decoded = match decoder_state.decoder.decode(&packet) {
             Ok(d) => d,
             Err(e) => {
                 eprintln!("Decode error: {}", e);
@@ -354,7 +381,7 @@ fn decode_audio_chunk(
         
         audio_buffer.lock().unwrap().extend(processed_samples);
         
-        // Actualizar posición
+        // Actualizar posición basada en el tiempo real del packet
         let frame_duration = duration_frames as f64 / spec.rate as f64;
         *current_pos.lock().unwrap() += frame_duration;
     }
