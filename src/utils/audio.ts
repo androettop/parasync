@@ -75,8 +75,6 @@ export class RustAudio {
     console.log("Audio status:", status);
     this._position = status.position;
     this._duration = status.duration;
-    this._playing = status.playing;
-    this._volume = status.volume;
   }
 
   // Getters/Setters para volume
