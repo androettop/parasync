@@ -38,6 +38,15 @@ export class SongAudioManager implements Loadable<{}> {
     return this._isPlaying;
   }
 
+  set isPlaying(value: boolean) {
+    this._isPlaying = value;
+    clearInterval(this._interval);
+    if (value) {
+      this.refreshStatus();
+      this._interval = window.setInterval(() => this.refreshStatus(), 5000);
+    }
+  }
+
   async load() {
     this._isLoaded = false;
     const allPaths = [...this.songTrackPaths, ...this.drumsTrackPaths];
@@ -57,24 +66,24 @@ export class SongAudioManager implements Loadable<{}> {
   async play() {
     await window.__TAURI_INTERNALS__.invoke("play_audio");
     clearInterval(this._interval);
-    //this._interval = window.setInterval(() => this.refreshStatus(), 32);
-    this._isPlaying = true;
+    this.isPlaying = true;
   }
 
   async pause() {
     await window.__TAURI_INTERNALS__.invoke("pause_audio");
-    this._isPlaying = false;
+    this.isPlaying = false;
     const st = await window.__TAURI_INTERNALS__.invoke("audio_status");
     this._position = st.position_secs ?? this._position;
   }
 
   async stop() {
     await window.__TAURI_INTERNALS__.invoke("stop_audio");
-    this._isPlaying = false;
+    this.isPlaying = false;
     this._position = 0;
   }
 
   async dispose() {
+    clearInterval(this._interval);
     await window.__TAURI_INTERNALS__.invoke("dispose_audio");
   }
 
@@ -86,10 +95,14 @@ export class SongAudioManager implements Loadable<{}> {
     this._drumsMuted = mute;
   }
 
-  // tip: refresca posición/duración periódicamente si lo necesitas
   async refreshStatus() {
     const st = await window.__TAURI_INTERNALS__.invoke("audio_status");
-    console.log("status", st);
     this._position = st.position_secs ?? this._position;
+  }
+
+  estimatePosition(delta: number) {
+    if (this.isPlaying) {
+      this._position += delta / 1000;
+    }
   }
 }
