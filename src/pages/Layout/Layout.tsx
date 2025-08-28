@@ -18,10 +18,13 @@ import {
   useMediaQuery,
   useTheme,
 } from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
+import RemoveIcon from "@mui/icons-material/Remove";
 import { useState } from "react";
 import { Outlet, To, useNavigate } from "react-router";
 import { notFoundRoute, routes } from "../../utils/routes";
 import useSongsPath from "../../hooks/useSongsPath";
+import { useLocalStorage } from "../../hooks/useLocalStorage";
 
 const drawerWidth = 280;
 
@@ -30,6 +33,7 @@ const Layout = () => {
 
   const navigate = useNavigate();
   const [songsPath] = useSongsPath();
+  const [delay, setDelay] = useLocalStorage<number>("audio-delay", -30);
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -38,7 +42,6 @@ const Layout = () => {
     routes.find((route) => route.path === location.pathname) || notFoundRoute;
   const showDrawer = !currentRoute.hideDrawer;
   const showAppbar = !currentRoute.hideAppbar;
-
   const handleDrawerClose = () => {
     setIsClosing(true);
     setIsDrawerOpen(false);
@@ -114,7 +117,28 @@ const Layout = () => {
 
             {/* Right side icons */}
             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              {/* TODO: Add user profile options */}
+              {/* Show delay modifier (ms and up and down buttons with icons) */}
+              {currentRoute.path === "/play" && (
+                <>
+                  <IconButton
+                    color="inherit"
+                    aria-label="increase delay"
+                    onClick={() => setDelay(delay + 100)}
+                  >
+                    <AddIcon />
+                  </IconButton>
+                  <IconButton
+                    color="inherit"
+                    aria-label="decrease delay"
+                    onClick={() => setDelay(delay - 100)}
+                  >
+                    <RemoveIcon />
+                  </IconButton>
+                  <Typography variant="body2" color="text.secondary">
+                    {delay} ms
+                  </Typography>
+                </>
+              )}
             </Box>
           </Toolbar>
         </AppBar>
