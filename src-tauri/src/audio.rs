@@ -22,7 +22,6 @@ use symphonia::core::{
 use cpal::{
     traits::{DeviceTrait, HostTrait, StreamTrait},
 };
-use tauri::{Window, Emitter};
 
 type AudioId = u32;
 
@@ -65,7 +64,7 @@ impl AudioPlayer {
         })
     }
     
-    fn start(&mut self, id: AudioId, path: PathBuf, duration: f64, window: Window, track_position: bool) -> Result<(), String> {
+    fn start(&mut self, id: AudioId, path: PathBuf, duration: f64) -> Result<(), String> {
         if self.command_sender.is_some() {
             return Ok(()); // Ya está iniciado
         }
@@ -78,7 +77,7 @@ impl AudioPlayer {
         let volume = self.volume.clone();
         
         let handle = thread::spawn(move || {
-            if let Err(e) = run_audio_player(id, path, duration, position, playing, volume, command_receiver, window, track_position) {
+            if let Err(e) = run_audio_player(id, path, duration, position, playing, volume, command_receiver) {
                 eprintln!("Audio player error: {}", e);
             }
         });
@@ -109,15 +108,13 @@ impl Drop for AudioPlayer {
 
 // Función que se ejecuta en el thread de audio
 fn run_audio_player(
-    id: AudioId,
+    _id: AudioId,
     path: PathBuf,
     duration: f64,
     position: Arc<Mutex<f64>>,
     playing: Arc<Mutex<bool>>,
     volume: Arc<Mutex<f32>>,
     command_receiver: mpsc::Receiver<PlayerCommand>,
-    window: Window,
-    track_position: bool,
 ) -> Result<(), String> {
     let host = cpal::default_host();
     let device = host
@@ -206,11 +203,6 @@ fn run_audio_player(
             // Actualizar posición
             let pos = *pos_clone.lock().unwrap();
             *decoder_position.lock().unwrap() = pos;
-            // Emitir evento al frontend con la posición actual y el id solo si track_position es true
-            if track_position {
-                let event_name = format!("audio-position-{}", id);
-                let _ = window.emit(event_name.as_str(), pos);
-            }
             
             // Sleep más corto para mejor responsividad
             thread::sleep(Duration::from_millis(5));
@@ -449,17 +441,15 @@ struct AudioTrack {
     path: PathBuf,
     duration: f64,
     player: Option<AudioPlayer>,
-    track_position: bool,
 }
 
 impl AudioTrack {
-    fn new(path: PathBuf, track_position: bool) -> Result<Self, String> {
+    fn new(path: PathBuf) -> Result<Self, String> {
         let duration = get_audio_duration(&path)?;
         Ok(Self {
             path,
             duration,
             player: None,
-            track_position,
         })
     }
 }
@@ -528,23 +518,23 @@ fn get_audio_duration(path: &PathBuf) -> Result<f64, String> {
 }
 
 #[tauri::command]
-pub fn load_audio(path: String, track_position: bool) -> Result<AudioId, String> {
+pub fn load_audio(path: String) -> Result<AudioId, String> {
     let id = AUDIO_MANAGER.get_next_id();
     let pathbuf = PathBuf::from(path);
-    let track = AudioTrack::new(pathbuf, track_position)?;
+    let track = AudioTrack::new(pathbuf)?;
     
     AUDIO_MANAGER.tracks.lock().unwrap().insert(id, track);
     Ok(id)
 }
 
 #[tauri::command]
-pub fn play_audio(window: tauri::Window, id: AudioId) -> Result<(), String> {
+pub fn play_audio(id: AudioId) -> Result<(), String> {
     let mut tracks = AUDIO_MANAGER.tracks.lock().unwrap();
     let track = tracks.get_mut(&id).ok_or("Audio not loaded")?;
     
     if track.player.is_none() {
         let mut player = AudioPlayer::new(track.path.clone(), track.duration)?;
-        player.start(id, track.path.clone(), track.duration, window.clone(), track.track_position)?;
+        player.start(id, track.path.clone(), track.duration)?;
         track.player = Some(player);
     }
     

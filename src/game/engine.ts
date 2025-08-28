@@ -92,7 +92,7 @@ class Game extends Engine {
 
   async initialize() {
     this.songTracks = await Promise.all(this.song.audioFileData.songTracks.map(
-      async (trackName, i) => RustAudio.load(`${this.songDirPath}/${trackName}`, i === 0 /* Track position only for the first track */),
+      async (trackName) => RustAudio.load(`${this.songDirPath}/${trackName}`),
     ));
     this.drumTracks = await Promise.all(this.song.audioFileData.drumTracks.map(
       async (trackName) => RustAudio.load(`${this.songDirPath}/${trackName}`),
@@ -112,8 +112,7 @@ class Game extends Engine {
 
   onPreUpdate(_engine: Engine, delta: number): void {
     // HACK: The data sync between rust/js is very slow, so the delta time is used to estimate the position
-    this.songTracks.forEach((songTrack) => songTrack.estimatePosition(delta));
-    this.drumTracks.forEach((drumTrack) => drumTrack.estimatePosition(delta));
+    this.songTracks?.[0].estimatePosition(delta);
   }
 
   onInitialize(engine: Engine): void {
