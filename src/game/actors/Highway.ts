@@ -37,7 +37,10 @@ class Highway extends Actor {
         1000 +
       audioDelay / 1000; // px/s
 
-    const currentTime = (engine.getPlaybackPosition() || 0) + notesDelay;
+    const currentTime =
+      (engine.getPlaybackPosition() || 0) +
+      notesDelay +
+      GAME_CONFIG.notesBatchSize / 2;
 
     const batchNumber = getBatchNumber(currentTime);
 
@@ -48,14 +51,6 @@ class Highway extends Actor {
       const currentNotes = this.notes[batchNumber];
       if (currentNotes) {
         currentNotes.forEach((note) => {
-          this.addChild(createNoteActor(note));
-        });
-      }
-
-      // Load next batch for anticipation
-      const nextNotes = this.notes[batchNumber + 1];
-      if (nextNotes) {
-        nextNotes.forEach((note) => {
           this.addChild(createNoteActor(note));
         });
       }

@@ -1,11 +1,14 @@
 import { Menu as MenuIcon } from "@mui/icons-material";
+import RestoreIcon from "@mui/icons-material/Restore";
 import {
   AppBar,
   Box,
   Container,
   Divider,
   Drawer,
+  FormControl,
   IconButton,
+  InputAdornment,
   List,
   ListItem,
   ListItemButton,
@@ -13,18 +16,20 @@ import {
   ListItemText,
   Menu,
   MenuItem,
+  Slider,
+  Stack,
+  TextField,
   Toolbar,
+  Tooltip,
   Typography,
   useMediaQuery,
   useTheme,
 } from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
-import RemoveIcon from "@mui/icons-material/Remove";
 import { useState } from "react";
 import { Outlet, To, useNavigate } from "react-router";
-import { notFoundRoute, routes } from "../../utils/routes";
-import useSongsPath from "../../hooks/useSongsPath";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
+import useSongsPath from "../../hooks/useSongsPath";
+import { notFoundRoute, routes } from "../../utils/routes";
 
 const drawerWidth = 280;
 
@@ -34,6 +39,7 @@ const Layout = () => {
   const navigate = useNavigate();
   const [songsPath] = useSongsPath();
   const [delay, setDelay] = useLocalStorage<number>("audio-delay", -30);
+  const [showAdvancedLatency, setShowAdvancedLatency] = useState(false);
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -42,6 +48,22 @@ const Layout = () => {
     routes.find((route) => route.path === location.pathname) || notFoundRoute;
   const showDrawer = !currentRoute.hideDrawer;
   const showAppbar = !currentRoute.hideAppbar;
+
+  const handleDelayChange = (newDelay: number) => {
+    // Clamp the value to a reasonable range
+    const clampedDelay = Math.max(-4000, Math.min(4000, newDelay));
+    setDelay(clampedDelay);
+  };
+
+  const handleDelayReset = () => {
+    setDelay(-30);
+  };
+
+  const getDelayLabel = (delayValue: number) => {
+    if (delayValue === 0) return "Sync";
+    if (delayValue > 0) return `+${delayValue}ms`;
+    return `${delayValue}ms`;
+  };
   const handleDrawerClose = () => {
     setIsClosing(true);
     setIsDrawerOpen(false);
@@ -117,28 +139,83 @@ const Layout = () => {
 
             {/* Right side icons */}
             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              {/* Show delay modifier (ms and up and down buttons with icons) */}
-              {currentRoute.path === "/play" && (
-                <>
-                  <IconButton
-                    color="inherit"
-                    aria-label="increase delay"
-                    onClick={() => setDelay(delay + 100)}
-                  >
-                    <AddIcon />
-                  </IconButton>
-                  <IconButton
-                    color="inherit"
-                    aria-label="decrease delay"
-                    onClick={() => setDelay(delay - 100)}
-                  >
-                    <RemoveIcon />
-                  </IconButton>
-                  <Typography variant="body2" color="text.secondary">
-                    {delay} ms
-                  </Typography>
-                </>
-              )}
+              {/* Enhanced Latency Modifier */}
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 2,
+                  minWidth: 200,
+                }}
+              >
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{ alignItems: "center", flex: 1 }}
+                >
+                  <Typography variant="body2">Latency:</Typography>
+                  <FormControl size="small" variant="outlined">
+                    <TextField
+                      type="number"
+                      value={delay}
+                      onChange={(e) => {
+                        return handleDelayChange(parseInt(e.target.value) || 0);
+                      }}
+                      size="small"
+                      sx={{
+                        width: 100,
+                        "& .MuiOutlinedInput-root": {
+                          height: 32,
+                          color: "inherit",
+                        },
+                        "& .MuiOutlinedInput-input": {
+                          textAlign: "center",
+                          padding: "4px 8px",
+                          fontSize: "0.875rem",
+                        },
+                        "& input[type=number]": {
+                          "-moz-appearance": "textfield",
+                        },
+                        "& input[type=number]::-webkit-outer-spin-button": {
+                          "-webkit-appearance": "none",
+                          margin: 0,
+                        },
+                        "& input[type=number]::-webkit-inner-spin-button": {
+                          "-webkit-appearance": "none",
+                          margin: 0,
+                        },
+                      }}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              ms
+                            </Typography>
+                          </InputAdornment>
+                        ),
+                      }}
+                      inputProps={{
+                        min: -4000,
+                        max: 4000,
+                        step: 1,
+                      }}
+                    />
+                  </FormControl>
+                  <Tooltip title="Reset to default (-30ms)">
+                    <IconButton
+                      color="inherit"
+                      size="small"
+                      onClick={handleDelayReset}
+                      sx={{ opacity: delay === -30 ? 0.3 : 1 }}
+                    >
+                      <RestoreIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </Stack>
+              </Box>
             </Box>
           </Toolbar>
         </AppBar>

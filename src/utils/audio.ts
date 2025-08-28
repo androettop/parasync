@@ -5,47 +5,44 @@ export type AudioStatus = {
 const audioCache: Record<string, RustAudio> = {};
 
 export class RustAudio {
-  private _id: number = -1;
+  private _path: string = "";
   private _position: number = 0;
   private _duration: number = 0;
   private _playing: boolean = false;
   private _volume: number = 1.0;
   private _updateInterval: number | null = null;
 
-  constructor() {
-    // Escuchar eventos de posición emitidos por Rust
+  constructor(path: string) {
+    this._path = path;
   }
 
   static async load(path: string): Promise<RustAudio> {
     if (audioCache[path]) {
       return audioCache[path];
     }
-    audioCache[path] = new RustAudio();
-    const id = await window.__TAURI_INTERNALS__.invoke("load_audio", {
-      path,
-    } as any);
-    audioCache[path]._id = id;
-    audioCache[path].updateStatus();
-    return audioCache[path];
+    const audio = new RustAudio(path);
+    audioCache[path] = audio;
+    await audio.updateStatus(); // This will lazy load the duration
+    return audio;
   }
 
   async play(): Promise<void> {
     await window.__TAURI_INTERNALS__.invoke("play_audio", {
-      id: this._id,
+      path: this._path,
     } as any);
     this._playing = true;
   }
 
   async pause(): Promise<void> {
     await window.__TAURI_INTERNALS__.invoke("pause_audio", {
-      id: this._id,
+      path: this._path,
     } as any);
     this._playing = false;
   }
 
   async stop(): Promise<void> {
     await window.__TAURI_INTERNALS__.invoke("stop_audio", {
-      id: this._id,
+      path: this._path,
     } as any);
     this._playing = false;
     this._position = 0;
@@ -53,7 +50,7 @@ export class RustAudio {
 
   async seek(position: number): Promise<void> {
     await window.__TAURI_INTERNALS__.invoke("seek_audio", {
-      id: this._id,
+      path: this._path,
       position,
     } as any);
     this._position = position;
@@ -64,15 +61,16 @@ export class RustAudio {
       clearInterval(this._updateInterval);
       this._updateInterval = null;
     }
+    delete audioCache[this._path];
     await window.__TAURI_INTERNALS__.invoke("unload_audio", {
-      id: this._id,
+      path: this._path,
     } as any);
   }
 
   async updateStatus(): Promise<void> {
     const status: AudioStatus = await window.__TAURI_INTERNALS__.invoke(
       "get_audio_status",
-      { id: this._id } as any,
+      { path: this._path } as any,
     );
     this._duration = status.duration;
   }
@@ -85,7 +83,7 @@ export class RustAudio {
   set volume(value: number) {
     this._volume = value;
     window.__TAURI_INTERNALS__.invoke("set_volume", {
-      id: this._id,
+      path: this._path,
       volume: value,
     } as any);
   }
@@ -118,8 +116,9 @@ export class RustAudio {
     return this._duration;
   }
 
-  get id(): number {
-    return this._id;
+  // Getter para el path
+  get path(): string {
+    return this._path;
   }
 
   estimatePosition(deltaTime: number): void {

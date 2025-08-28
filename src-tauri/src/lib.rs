@@ -20,7 +20,6 @@ pub fn run() {
         .manage(audio_manager)
         .invoke_handler(tauri::generate_handler![
             greet,
-            audio::load_audio,
             audio::play_audio,
             audio::pause_audio,
             audio::stop_audio,
