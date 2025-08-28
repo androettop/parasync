@@ -1,8 +1,10 @@
 import {
   MusicNote as MusicNoteIcon,
   Settings as SettingsIcon,
+  BugReport as BugReportIcon,
 } from "@mui/icons-material";
 import DownloadIcon from "@mui/icons-material/Download";
+import AudioDebugPage from "../pages/AudioDebugPage/AudioDebugPage";
 import MySongsPage from "../pages/MySongsPage/MySongsPage";
 import NotFoundPage from "../pages/NotFoundPage/NotFoundPage";
 import PlayerPage from "../pages/PlayerPage/PlayerPage";
@@ -40,6 +42,13 @@ export const routes: Route[] = [
     path: "/settings",
     PageComponent: SettingsPage,
     Icon: SettingsIcon,
+  },
+  {
+    label: "Audio Debug",
+    name: "audio-debug",
+    path: "/audio-debug",
+    PageComponent: AudioDebugPage,
+    Icon: BugReportIcon,
   },
   {
     label: "Player",
