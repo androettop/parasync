@@ -7,6 +7,7 @@ use std::{
     sync::{Arc, Mutex, mpsc},
     thread,
     time::Duration,
+    panic,
 };
 use once_cell::sync::Lazy;
 use serde::Serialize;
@@ -247,6 +248,12 @@ fn decode_audio_chunk(
         .ok_or("No audio track found")?;
     
     let track_id = track.id;
+    
+    // Verificar que el track tiene la información necesaria
+    if track.codec_params.sample_rate.is_none() {
+        return Err("Track has no sample rate information".to_string());
+    }
+    
     let mut decoder = symphonia::default::get_codecs()
         .make(&track.codec_params, &DecoderOptions::default())
         .map_err(|e| e.to_string())?;
@@ -280,17 +287,45 @@ fn decode_audio_chunk(
         
         let decoded = match decoder.decode(&packet) {
             Ok(d) => d,
-            Err(_) => continue,
+            Err(e) => {
+                eprintln!("Decode error: {}", e);
+                continue;
+            }
         };
         
-        // Convertir a f32 samples
+        // Convertir a f32 samples con manejo de errores
         let spec = *decoded.spec();
         let duration_frames = decoded.frames() as u64;
+        
+        // Verificar que hay canales de audio
+        if spec.channels.count() == 0 {
+            eprintln!("Warning: Audio track has no channels");
+            continue;
+        }
+        
+        // Verificar que hay frames
+        if duration_frames == 0 {
+            continue;
+        }
+        
         let mut sample_buf = SampleBuffer::<f32>::new(duration_frames, spec);
-        sample_buf.copy_interleaved_ref(decoded);
+        
+        // Intentar copiar los samples con manejo de errores
+        if let Err(e) = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            sample_buf.copy_interleaved_ref(decoded);
+        })) {
+            eprintln!("Error copying samples: {:?}", e);
+            continue;
+        }
         
         // Agregar samples al buffer
         let samples = sample_buf.samples();
+        
+        // Verificar que hay samples
+        if samples.is_empty() {
+            continue;
+        }
+        
         let current_volume = *volume.lock().unwrap();
         let processed_samples: Vec<f32> = samples.iter()
             .map(|&s| s * current_volume)
@@ -369,8 +404,18 @@ fn get_audio_duration(path: &PathBuf) -> Result<f64, String> {
         .find(|t| t.codec_params.codec != CODEC_TYPE_NULL)
         .ok_or("No audio track found")?;
     
+    // Verificar que el track tiene información válida
+    if track.codec_params.sample_rate.is_none() {
+        return Err("No sample rate information".to_string());
+    }
+    
     let duration_ts = track.codec_params.n_frames.unwrap_or(0);
     let sample_rate = track.codec_params.sample_rate.unwrap_or(44100);
+    
+    if duration_ts == 0 {
+        return Err("No frame information available".to_string());
+    }
+    
     let duration = duration_ts as f64 / sample_rate as f64;
     
     Ok(duration)
