@@ -66,16 +66,15 @@ class Game extends Engine {
   }
 
   public areDrumsMuted() {
-    // TODO: implement this.
-    return false;
+    return this.songAudioManager?.drumsMuted || false;
   }
 
   public muteDrums() {
-    // TODO: implement this.
+    this.songAudioManager?.toggleDrums(true);
   }
 
   public unmuteDrums() {
-    // TODO: implemenmt this.
+    this.songAudioManager?.toggleDrums(false);
   }
 
   public getPlaybackPosition() {

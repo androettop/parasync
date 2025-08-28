@@ -68,6 +68,19 @@ impl AudioService {
         rrx.recv().map_err(|e| e.to_string())?
     }
 
+    // Opcional: helpers públicos si quieres invocarlo directamente (los comandos Tauri pueden llamar a estos)
+    pub fn set_tracks_gain_by_path(&self, paths: Vec<String>, gain: f32, ramp_ms: Option<u32>) -> Result<(), String> {
+        let (rtx, rrx) = bounded(1);
+        self.tx.send(AudioCmd::SetTracksGainByPath { paths, gain, ramp_ms, resp: rtx }).map_err(|e| e.to_string())?;
+        rrx.recv().map_err(|e| e.to_string())?
+    }
+
+    pub fn mute_tracks_by_path(&self, paths: Vec<String>, muted: bool, ramp_ms: Option<u32>) -> Result<(), String> {
+        let (rtx, rrx) = bounded(1);
+        self.tx.send(AudioCmd::MuteTracksByPath { paths, muted, ramp_ms, resp: rtx }).map_err(|e| e.to_string())?;
+        rrx.recv().map_err(|e| e.to_string())?
+    }
+
     pub fn status(&self) -> AudioStatus {
         let sh = self.shared.lock();
         let sr = sh.out_sample_rate.max(1) as f64;
@@ -94,6 +107,10 @@ enum AudioCmd {
     Stop  { resp: Sender<Result<(), String>> },
     Seek  { seconds: f64, resp: Sender<Result<(), String>> },
     Dispose { resp: Sender<Result<(), String>> },
+
+    // nuevos comandos para ganancia/mute por path
+    SetTracksGainByPath { paths: Vec<String>, gain: f32, ramp_ms: Option<u32>, resp: Sender<Result<(), String>> },
+    MuteTracksByPath    { paths: Vec<String>, muted: bool, ramp_ms: Option<u32>, resp: Sender<Result<(), String>> },
 }
 
 #[derive(Default)]
@@ -103,6 +120,14 @@ struct Shared {
     pos_frames_base: usize,  // frames acumulados (no incluye el dt de reproducción en curso)
     play_started_at: Option<Instant>,
     is_playing: bool,
+}
+
+// Control de ganancia por pista (compartido entre Engine y la fuente de mezcla)
+#[derive(Clone, Copy)]
+struct GainCmd {
+    target: f32,        // objetivo (0.0 = mute, 1.0 = unidad, >1.0 permitido si quieres)
+    ramp_frames: usize, // cuántos frames tardar en llegar al objetivo
+    gen: u64,           // número de versión para detectar cambios
 }
 
 // ---------- Hilo de audio (posee todo lo que NO es Send) ----------
@@ -119,6 +144,9 @@ struct Engine {
     // streaming: guardamos rutas
     paths: Vec<String>,
     total_frames: usize,   // 0 = desconocido (no lo devolvemos)
+
+    // ganancias compartidas por pista (mismo orden que `paths`)
+    gains: std::sync::Arc<Mutex<Vec<GainCmd>>>,
 
     sink: Option<Sink>,
     state: PlayState,
@@ -140,6 +168,7 @@ fn audio_thread(rx: Receiver<AudioCmd>, shared: ArcShared) {
         out_ch: ch,
         paths: Vec::new(),
         total_frames: 0,
+        gains: std::sync::Arc::new(Mutex::new(Vec::new())),
         sink: None,
         state: PlayState::Stopped,
         pos_frames: 0,
@@ -170,6 +199,15 @@ fn audio_thread(rx: Receiver<AudioCmd>, shared: ArcShared) {
             AudioCmd::Dispose { resp } => {
                 let r = eng.dispose(); eng.push_shared(); let _ = resp.send(r);
             }
+
+            AudioCmd::SetTracksGainByPath { paths, gain, ramp_ms, resp } => {
+                let r = eng.set_tracks_gain_by_path(paths, gain, ramp_ms);
+                eng.push_shared(); let _ = resp.send(r);
+            }
+            AudioCmd::MuteTracksByPath { paths, muted, ramp_ms, resp } => {
+                let r = eng.set_tracks_gain_by_path(paths, if muted { 0.0 } else { 1.0 }, ramp_ms);
+                eng.push_shared(); let _ = resp.send(r);
+            }
         };
     }
 }
@@ -198,11 +236,16 @@ impl Engine {
     fn prepare_streaming(&mut self, paths: Vec<String>) -> Result<(), String> {
         self.ensure_output()?;
         if paths.is_empty() { return Err("Se requiere al menos una ruta de audio".into()); }
-        self.paths = paths;
         self.total_frames = 0; // desconocido (la tienes en el frontend)
         self.pos_frames = 0;
         self.state = PlayState::Stopped;
         self.kill_sink();
+
+        // reemplazamos paths y reinicializamos vector de ganancias
+        self.paths = paths;
+        let mut g = self.gains.lock();
+        *g = vec![GainCmd { target: 1.0, ramp_frames: 0, gen: 0 }; self.paths.len()];
+
         Ok(())
     }
 
@@ -274,6 +317,7 @@ impl Engine {
     fn dispose(&mut self) -> Result<(), String> {
         self.kill_sink();
         self.paths.clear();
+        self.gains.lock().clear();
         self.total_frames = 0;
         self.pos_frames = 0;
         self.state = PlayState::Stopped;
@@ -284,6 +328,7 @@ impl Engine {
         let handle = self.handle.as_ref().ok_or("OutputStreamHandle no inicializado")?;
         let src = MixedSource::new(
             self.paths.clone(),
+            self.gains.clone(),
             self.out_sr,
             self.out_ch,
             self.block_frames,
@@ -299,9 +344,30 @@ impl Engine {
     fn kill_sink(&mut self) {
         if let Some(sink) = self.sink.take() { sink.stop(); }
     }
+
+    fn set_tracks_gain_by_path(&mut self, paths: Vec<String>, gain: f32, ramp_ms: Option<u32>) -> Result<(), String> {
+        if self.paths.is_empty() { return Err("No hay audio cargado".into()); }
+        let g_clamped = if gain.is_finite() { gain.max(0.0) } else { 0.0 };
+        let ramp_ms = ramp_ms.unwrap_or(10);
+        let ramp_frames = ((ramp_ms as u64 * self.out_sr as u64) / 1000) as usize;
+
+        let mut gains = self.gains.lock();
+        for p in &paths {
+            if let Some(idx) = self.paths.iter().position(|pp| pp == p) {
+                let mut gc = gains[idx];
+                gc.target = g_clamped;
+                gc.ramp_frames = ramp_frames;
+                gc.gen = gc.gen.wrapping_add(1);
+                gains[idx] = gc;
+            } else {
+                // ignorar rutas no encontradas
+            }
+        }
+        Ok(())
+    }
 }
 
-// ---------- Fuente de mezcla por streaming ----------
+// ---------- Fuente de mezcla por streaming con ganancia por pista ----------
 
 struct MixedSource {
     tracks: Vec<TrackStream>,
@@ -311,13 +377,23 @@ struct MixedSource {
     buf: Vec<f32>,
     buf_pos: usize,
     finished: bool,
-    // seguridad/volumen: pequeño headroom para evitar clip duro al sumar
     headroom: f32,
+
+    // control de ganancia compartida
+    gains: std::sync::Arc<Mutex<Vec<GainCmd>>>,
+
+    // estado local por pista para hacer ramps suaves
+    curr_gain: Vec<f32>,
+    target_gain: Vec<f32>,
+    ramp_remaining: Vec<usize>,
+    last_gen: Vec<u64>,
+    scratch: Vec<f32>, // buffer temporal por pista para renderizar antes de mezclar
 }
 
 impl MixedSource {
     fn new(
         paths: Vec<String>,
+        gains: std::sync::Arc<Mutex<Vec<GainCmd>>>,
         out_sr: u32,
         out_ch: u16,
         block_frames: usize,
@@ -341,6 +417,7 @@ impl MixedSource {
             tracks.push(trk);
         }
 
+        let n = tracks.len();
         Ok(Self {
             tracks,
             out_ch,
@@ -350,22 +427,78 @@ impl MixedSource {
             buf_pos: 0,
             finished: false,
             headroom: 0.8, // ~ -1.9 dB
+            gains,
+            curr_gain: vec![1.0; n],
+            target_gain: vec![1.0; n],
+            ramp_remaining: vec![0; n],
+            last_gen: vec![0; n],
+            scratch: Vec::new(),
         })
+    }
+
+    fn update_gains_from_shared(&mut self) {
+        let shared = self.gains.lock();
+        let n = self.tracks.len().min(shared.len());
+        for i in 0..n {
+            let gc = shared[i];
+            if gc.gen != self.last_gen[i] || self.target_gain[i] != gc.target {
+                self.target_gain[i] = gc.target;
+                self.ramp_remaining[i] = gc.ramp_frames;
+                self.last_gen[i] = gc.gen;
+            }
+        }
     }
 
     fn fill_block(&mut self) {
         let ch = self.out_ch as usize;
         let frames = self.block_frames;
         let needed = frames * ch;
+
         if self.buf.len() != needed {
             self.buf.resize(needed, 0.0);
         } else {
             for x in &mut self.buf { *x = 0.0; }
         }
 
+        // snapshot de ganancias y ramps
+        self.update_gains_from_shared();
+
+        // scratch por pista
+        if self.scratch.len() != needed { self.scratch.resize(needed, 0.0); }
+
         let mut active = 0usize;
-        for t in &mut self.tracks {
-            if t.add_block(&mut self.buf, frames) { active += 1; }
+
+        for i in 0..self.tracks.len() {
+            // renderiza pista i en scratch (intercalado), devuelve si está activa
+            self.scratch.fill(0.0);
+            if self.tracks[i].render_block(&mut self.scratch, frames) { active += 1; }
+
+            // rampa dentro del bloque (si aplica)
+            let mut cg = self.curr_gain[i];
+            let tg = self.target_gain[i];
+            let mut rem = self.ramp_remaining[i];
+
+            // mezcla scratch en buf aplicando ganancia (y headroom se aplicará al final)
+            if rem > 0 {
+                // rampa lineal por muestra
+                for s in 0..needed {
+                    let g = if rem > 0 {
+                        let step = (tg - cg) / rem as f32;
+                        cg += step;
+                        rem -= 1;
+                        cg
+                    } else { cg };
+                    self.buf[s] += self.scratch[s] * g;
+                }
+            } else {
+                // sin rampa
+                for s in 0..needed {
+                    self.buf[s] += self.scratch[s] * cg;
+                }
+            }
+
+            self.curr_gain[i] = cg;
+            self.ramp_remaining[i] = rem;
         }
 
         // aplicar pequeño headroom para evitar clip duro
@@ -402,7 +535,7 @@ impl Source for MixedSource {
     #[inline] fn current_frame_len(&self) -> Option<usize> { None }
     #[inline] fn channels(&self) -> u16 { self.out_ch }
     #[inline] fn sample_rate(&self) -> u32 { self.out_sr }
-    #[inline] fn total_duration(&self) -> Option<std::time::Duration> { None } // no devolvemos duración
+    #[inline] fn total_duration(&self) -> Option<std::time::Duration> { None }
 }
 
 // ---------- Track con remuestreo lineal incremental ----------
@@ -484,12 +617,13 @@ impl TrackStream {
         frame
     }
 
-    // Devuelve true si aún produce audio (activo)
-    fn add_block(&mut self, out: &mut [f32], frames: usize) -> bool {
+    // Renderiza 'frames' al buffer 'out' (intercalado). Devuelve true si aún hay audio.
+    fn render_block(&mut self, out: &mut [f32], frames: usize) -> bool {
         let ch_out = self.out_ch;
         let ch_in = self.in_ch;
         let mut any_nonzero = false;
 
+        // out debe venir con tamaño frames*ch_out; asumimos ya inicializado a 0
         for f in 0..frames {
             // avanzar en función de ratio
             while self.phase >= 1.0 && !self.at_end {
@@ -506,6 +640,7 @@ impl TrackStream {
                 let idx = f * ch_out;
                 out[idx] += l;
                 out[idx + 1] += r;
+                // si hay más canales de salida, duplicamos L/R
                 for c in 2..ch_out {
                     out[idx + c] += if c % 2 == 0 { l } else { r };
                 }

@@ -7,6 +7,7 @@ export class SongAudioManager implements Loadable<{}> {
   private _isLoaded = false;
   private readonly songTrackPaths: string[];
   private readonly drumsTrackPaths: string[];
+  private _drumsMuted = false;
 
   private _interval: number = 0;
 
@@ -28,6 +29,11 @@ export class SongAudioManager implements Loadable<{}> {
   get position() {
     return this._position;
   }
+
+  get drumsMuted() {
+    return this._drumsMuted;
+  }
+
   get isPlaying() {
     return this._isPlaying;
   }
@@ -70,6 +76,14 @@ export class SongAudioManager implements Loadable<{}> {
 
   async dispose() {
     await window.__TAURI_INTERNALS__.invoke("dispose_audio");
+  }
+
+  async toggleDrums(mute: boolean) {
+    await window.__TAURI_INTERNALS__.invoke("mute_tracks_by_path", {
+      paths: this.drumsTrackPaths,
+      muted: mute,
+    } as any);
+    this._drumsMuted = mute;
   }
 
   // tip: refresca posición/duración periódicamente si lo necesitas

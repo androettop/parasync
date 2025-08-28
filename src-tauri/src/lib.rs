@@ -12,6 +12,8 @@ pub fn run() {
             audio_commands::seek_audio,
             audio_commands::dispose_audio,
             audio_commands::audio_status,
+            audio_commands::set_tracks_gain_by_path,
+            audio_commands::mute_tracks_by_path,
         ])
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_dialog::init())
