@@ -79,42 +79,22 @@ pub fn load_audio(
     println!("[AUDIO] load_audio called with path: {}", path);
     
     let manager = audio_manager.lock().unwrap();
-    let mut player = manager.player.lock().unwrap();
-    
-    // Play the file with default options (preloaded for better seeking support)
-    let phonic_id = player
-        .play_file(&path, FilePlaybackOptions::default())
-        .map_err(|e| {
-            let error_msg = format!("Failed to load audio file '{}': {}", path, e);
-            println!("[AUDIO] ERROR: {}", error_msg);
-            error_msg
-        })?;
-    
-    println!("[AUDIO] File loaded successfully with phonic ID: {}", phonic_id);
-    
-    // Immediately stop the file since we just want to load it
-    if let Err(e) = player.stop_source(phonic_id) {
-        println!("[AUDIO] WARNING: Failed to stop source after loading: {}", e);
-    } else {
-        println!("[AUDIO] Source stopped after loading");
-    }
-    
     let id = manager.get_next_id();
     println!("[AUDIO] Generated audio ID: {}", id);
     
-    // For now, we don't have easy access to duration from phonic
-    // This could be implemented by loading file metadata separately
+    // With streaming, we don't actually start playback until play_audio is called
+    // We just store the path and prepare for future playback
     let track = AudioTrack {
         file_path: path.clone(),
-        phonic_id,
-        duration: None, // TODO: Get duration from file metadata
+        phonic_id: 0, // Placeholder, will be set when actually playing
+        duration: None, // Streaming files don't provide duration upfront
     };
     
     // Store the track metadata
     manager.tracks.lock().unwrap().insert(id, track);
     println!("[AUDIO] Track metadata stored for ID: {}", id);
     
-    println!("[AUDIO] load_audio completed successfully. ID: {}", id);
+    println!("[AUDIO] load_audio completed successfully (streaming ready). ID: {}", id);
     Ok(id)
 }
 
@@ -126,31 +106,31 @@ pub fn play_audio(
     println!("[AUDIO] play_audio called with ID: {}", id);
     
     let manager = audio_manager.lock().unwrap();
-    let tracks = manager.tracks.lock().unwrap();
+    let mut tracks = manager.tracks.lock().unwrap();
     
-    if let Some(track) = tracks.get(&id) {
+    if let Some(track) = tracks.get_mut(&id) {
         println!("[AUDIO] Found track for ID: {}, file: {}", id, track.file_path);
         
         let mut player = manager.player.lock().unwrap();
         
-        // Since phonic doesn't have pause/resume for individual tracks easily,
-        // we'll need to play the file again
+        // Start streaming playback of the file
         let new_phonic_id = player
-            .play_file(&track.file_path, FilePlaybackOptions::default())
+            .play_file(&track.file_path, FilePlaybackOptions::default().streamed())
             .map_err(|e| {
                 let error_msg = format!("Failed to play audio file '{}': {}", track.file_path, e);
                 println!("[AUDIO] ERROR: {}", error_msg);
                 error_msg
             })?;
         
-        println!("[AUDIO] File playing with new phonic ID: {}", new_phonic_id);
+        // Update the track with the new phonic ID
+        track.phonic_id = new_phonic_id;
+        println!("[AUDIO] Started streaming playback with phonic ID: {}", new_phonic_id);
+        
         println!("[AUDIO] play_audio completed successfully for ID: {}", id);
         Ok(())
     } else {
         let error_msg = format!("Audio track with id {} not found", id);
         println!("[AUDIO] ERROR: {}", error_msg);
-        let track_ids: Vec<_> = tracks.keys().collect();
-        println!("[AUDIO] Available track IDs: {:?}", track_ids);
         Err(error_msg)
     }
 }
