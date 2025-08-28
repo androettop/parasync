@@ -6,7 +6,7 @@ use std::{
     path::PathBuf,
     sync::{Arc, Mutex, mpsc},
     thread,
-    time::Duration,
+    time::Duration
 };
 use once_cell::sync::Lazy;
 use serde::Serialize;
@@ -40,13 +40,20 @@ struct AudioPlayer {
     volume: Arc<Mutex<f32>>,
     command_sender: Option<mpsc::Sender<PlayerCommand>>,
     handle: Option<thread::JoinHandle<()>>,
+    // Cache para status - optimización de performance
+    cached_status: Arc<Mutex<AudioStatus>>,
 }
 
 impl AudioPlayer {
-    fn new(_path: PathBuf, _duration: f64) -> Result<Self, String> {
+    fn new(_path: PathBuf, duration: f64) -> Result<Self, String> {
         let position = Arc::new(Mutex::new(0.0));
         let playing = Arc::new(Mutex::new(false));
         let volume = Arc::new(Mutex::new(1.0));
+        let cached_status = Arc::new(Mutex::new(AudioStatus {
+            position: 0.0,
+            duration,
+            playing: false,
+        }));
         
         Ok(Self {
             position,
@@ -54,6 +61,7 @@ impl AudioPlayer {
             volume,
             command_sender: None,
             handle: None,
+            cached_status,
         })
     }
     
@@ -68,9 +76,10 @@ impl AudioPlayer {
         let position = self.position.clone();
         let playing = self.playing.clone();
         let volume = self.volume.clone();
+        let cached_status = self.cached_status.clone();
         
         let handle = thread::spawn(move || {
-            if let Err(e) = run_audio_player(path, duration, position, playing, volume, command_receiver) {
+            if let Err(e) = run_audio_player(path, duration, position, playing, volume, cached_status, command_receiver) {
                 eprintln!("Audio player error: {}", e);
             }
         });
@@ -106,6 +115,7 @@ fn run_audio_player(
     position: Arc<Mutex<f64>>,
     playing: Arc<Mutex<bool>>,
     volume: Arc<Mutex<f32>>,
+    cached_status: Arc<Mutex<AudioStatus>>,
     command_receiver: mpsc::Receiver<PlayerCommand>,
 ) -> Result<(), String> {
     let host = cpal::default_host();
@@ -114,7 +124,7 @@ fn run_audio_player(
         .ok_or("No output device available")?;
     
     let config = device.default_output_config().map_err(|e| e.to_string())?;
-    let _sample_rate = config.sample_rate().0 as f64;
+    let output_sample_rate = config.sample_rate().0 as f64;
     
     // Buffer compartido entre el decodificador y el stream de audio
     let audio_buffer = Arc::new(Mutex::new(Vec::<f32>::new()));
@@ -139,7 +149,7 @@ fn run_audio_player(
     
     let decoder_handle = thread::spawn(move || {
         // Inicializar el decodificador PERSISTENTE fuera del loop
-        let mut decoder_state = match init_persistent_decoder(&decoder_path) {
+        let mut decoder_state = match init_persistent_decoder(&decoder_path, output_sample_rate) {
             Ok(state) => state,
             Err(e) => {
                 eprintln!("Failed to initialize decoder: {}", e);
@@ -194,6 +204,12 @@ fn run_audio_player(
             
             // Actualizar posición
             *decoder_position.lock().unwrap() = *pos_clone.lock().unwrap();
+            
+            // Actualizar cache de status para mejor performance
+            if let Ok(mut cache) = cached_status.try_lock() {
+                cache.position = *pos_clone.lock().unwrap();
+                cache.playing = *decoder_playing.lock().unwrap();
+            }
             
             // Sleep más corto para mejor responsividad
             thread::sleep(Duration::from_millis(5));
@@ -252,10 +268,12 @@ struct DecoderState {
     format: Box<dyn symphonia::core::formats::FormatReader>,
     decoder: Box<dyn symphonia::core::codecs::Decoder>,
     track_id: u32,
+    input_sample_rate: f64,
+    output_sample_rate: f64,
 }
 
 // Inicializar el decodificador persistente
-fn init_persistent_decoder(path: &PathBuf) -> Result<DecoderState, String> {
+fn init_persistent_decoder(path: &PathBuf, output_sample_rate: f64) -> Result<DecoderState, String> {
     let file = File::open(path).map_err(|e| e.to_string())?;
     let mss = MediaSourceStream::new(Box::new(file), Default::default());
     
@@ -287,10 +305,14 @@ fn init_persistent_decoder(path: &PathBuf) -> Result<DecoderState, String> {
         .make(&spec, &DecoderOptions::default())
         .map_err(|e| e.to_string())?;
     
+    let input_sample_rate = spec.sample_rate.unwrap() as f64;
+    
     Ok(DecoderState {
         format,
         decoder,
         track_id,
+        input_sample_rate,
+        output_sample_rate,
     })
 }
 
@@ -366,7 +388,7 @@ fn decode_audio_chunk_persistent(
             continue;
         }
         
-        // Agregar samples al buffer
+        // Agregar samples al buffer con resampling si es necesario
         let samples = sample_buf.samples();
         
         // Verificar que hay samples
@@ -375,18 +397,51 @@ fn decode_audio_chunk_persistent(
         }
         
         let current_volume = *volume.lock().unwrap();
-        let processed_samples: Vec<f32> = samples.iter()
+        
+        // Aplicar resampling si es necesario
+        let processed_samples: Vec<f32> = if (decoder_state.input_sample_rate - decoder_state.output_sample_rate).abs() > 1.0 {
+            // Necesitamos resampling
+            let ratio = decoder_state.output_sample_rate / decoder_state.input_sample_rate;
+            simple_resample(samples, ratio)
+        } else {
+            // No necesitamos resampling
+            samples.to_vec()
+        };
+        
+        // Aplicar volumen
+        let final_samples: Vec<f32> = processed_samples.iter()
             .map(|&s| s * current_volume)
             .collect();
         
-        audio_buffer.lock().unwrap().extend(processed_samples);
+        audio_buffer.lock().unwrap().extend(final_samples);
         
         // Actualizar posición basada en el tiempo real del packet
-        let frame_duration = duration_frames as f64 / spec.rate as f64;
+        let frame_duration = duration_frames as f64 / decoder_state.input_sample_rate;
         *current_pos.lock().unwrap() += frame_duration;
     }
     
     Ok(())
+}
+
+// Función simple de resampling
+fn simple_resample(input: &[f32], ratio: f64) -> Vec<f32> {
+    if ratio == 1.0 {
+        return input.to_vec();
+    }
+    
+    let output_len = (input.len() as f64 * ratio) as usize;
+    let mut output = Vec::with_capacity(output_len);
+    
+    for i in 0..output_len {
+        let input_index = (i as f64 / ratio) as usize;
+        if input_index < input.len() {
+            output.push(input[input_index]);
+        } else {
+            output.push(0.0);
+        }
+    }
+    
+    output
 }
 
 struct AudioTrack {
@@ -545,7 +600,7 @@ pub fn set_volume(id: AudioId, volume: f32) -> Result<(), String> {
     Ok(())
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct AudioStatus {
     position: f64,
     duration: f64,
@@ -558,11 +613,21 @@ pub fn get_audio_status(id: AudioId) -> Result<AudioStatus, String> {
     let track = tracks.get(&id).ok_or("Audio not loaded")?;
     
     if let Some(player) = &track.player {
-        Ok(AudioStatus {
-            position: *player.position.lock().unwrap(),
-            duration: track.duration,
-            playing: *player.playing.lock().unwrap(),
-        })
+        // Usar cache para mejor performance
+        if let Ok(cached) = player.cached_status.try_lock() {
+            Ok(AudioStatus {
+                position: cached.position,
+                duration: cached.duration,
+                playing: cached.playing,
+            })
+        } else {
+            // Fallback si no se puede acceder al cache
+            Ok(AudioStatus {
+                position: *player.position.lock().unwrap(),
+                duration: track.duration,
+                playing: *player.playing.lock().unwrap(),
+            })
+        }
     } else {
         Ok(AudioStatus {
             position: 0.0,
