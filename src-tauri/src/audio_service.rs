@@ -547,7 +547,6 @@ struct TrackStream {
     in_ch: usize,
     in_sr: u32,
     out_ch: usize,
-    out_sr: u32,
 
     // remuestreo incremental
     ratio: f64,    // in_sr / out_sr
@@ -570,7 +569,6 @@ impl TrackStream {
             in_ch,
             in_sr,
             out_ch,
-            out_sr,
             ratio: in_sr as f64 / out_sr as f64,
             phase: 0.0,
             last: vec![0.0; in_ch],
