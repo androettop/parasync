@@ -31,3 +31,7 @@ once_cell = "1.19"
 cpal = "0.15"
 symphonia = { version = "0.5", features = ["all"] }
 
+# Android specific linker configuration
+[target.'cfg(target_os = "android")'.dependencies]
+libc = "0.2"
+
