@@ -244,7 +244,9 @@ impl Engine {
         // reemplazamos paths y reinicializamos vector de ganancias
         self.paths = paths;
         let mut g = self.gains.lock();
-        *g = vec![GainCmd { target: 1.0, ramp_frames: 0, gen: 0 }; self.paths.len()];
+        let len = self.paths.len();
+        let init = GainCmd { target: 1.0, ramp_frames: 0, gen: 0 };
+        *g = std::iter::repeat(init).take(len).collect::<Vec<_>>();
 
         Ok(())
     }
