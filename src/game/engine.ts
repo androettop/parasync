@@ -3,22 +3,22 @@ import {
   DisplayMode,
   Engine,
   ImageSource,
-  ScrollPreventionMode,
-  Sound,
+  ScrollPreventionMode
 } from "excalibur";
 import { ParadiddleSong } from "../types/songs";
+import { RustAudio } from "../utils/audio";
 import { GAME_CONFIG } from "./config";
+import { releaseFileUrl } from "./helpers/filesLoader";
 import { applyBlur } from "./helpers/imageEffects";
-import { ImageFile, MusicFile } from "./helpers/loaders";
+import { ImageFile } from "./helpers/loaders";
 import { createLoader, Resources as NotesResources } from "./resources";
 import MainScene from "./scenes/MainScene";
-import { releaseFileUrl } from "./helpers/filesLoader";
 
 class Game extends Engine {
   song: ParadiddleSong;
   songDirPath: string;
-  songTracks: Sound[] = [];
-  drumTracks: Sound[] = [];
+  songTracks: RustAudio[] = [];
+  drumTracks: RustAudio[] = [];
   cover: ImageSource | null = null;
   coverBg: ImageSource | null = null;
   exitHandler: () => void;
@@ -79,7 +79,7 @@ class Game extends Engine {
   }
 
   public getPlaybackPosition() {
-    return this.songTracks[0].getPlaybackPosition();
+    return this.songTracks[0].position;
   }
 
   public getDuration() {
@@ -87,16 +87,16 @@ class Game extends Engine {
   }
 
   public isPlaying() {
-    return this.songTracks[0].isPlaying();
+    return this.songTracks[0].playing;
   }
 
   async initialize() {
-    this.songTracks = this.song.audioFileData.songTracks.map(
-      (trackName) => new MusicFile(`${this.songDirPath}/${trackName}`),
-    );
-    this.drumTracks = this.song.audioFileData.drumTracks.map(
-      (trackName) => new MusicFile(`${this.songDirPath}/${trackName}`),
-    );
+    this.songTracks = await Promise.all(this.song.audioFileData.songTracks.map(
+      async (trackName) => RustAudio.load(`${this.songDirPath}/${trackName}`),
+    ));
+    this.drumTracks = await Promise.all(this.song.audioFileData.drumTracks.map(
+      async (trackName) => RustAudio.load(`${this.songDirPath}/${trackName}`),
+    ));
 
     this.cover = new ImageFile(
       `${this.songDirPath}/${this.song.recordingMetadata.coverImagePath}`,
@@ -105,11 +105,15 @@ class Game extends Engine {
     this.coverBg = await applyBlur(this.cover);
     this.add("main", new MainScene());
     const loader = createLoader(NotesResources);
-    loader.addResources(this.songTracks);
-    loader.addResources(this.drumTracks);
     loader.addResource(this.cover);
     loader.addResource(this.coverBg);
     this.start(loader);
+  }
+
+  onPreUpdate(_engine: Engine, delta: number): void {
+    // HACK: The data sync between rust/js is very slow, so the delta time is used to estimate the position
+    this.songTracks.forEach((songTrack) => songTrack.estimatePosition(delta/1000));
+    this.drumTracks.forEach((drumTrack) => drumTrack.estimatePosition(delta/1000));
   }
 
   onInitialize(engine: Engine): void {
@@ -133,8 +137,8 @@ class Game extends Engine {
     console.log("Releasing resources...");
     releaseFileUrl(this.cover?.data.src);
     releaseFileUrl(this.coverBg?.data.src);
-    this.songTracks.forEach((songTrack) => releaseFileUrl(songTrack.path));
-    this.drumTracks.forEach((drumTrack) => releaseFileUrl(drumTrack.path));
+    this.songTracks.forEach((songTrack) => songTrack.unload());
+    this.drumTracks.forEach((drumTrack) => drumTrack.unload());
   }
 }
 
