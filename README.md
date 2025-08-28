@@ -11,9 +11,7 @@ It’s fully compatible with songs from the popular VR drumming app [Paradiddle]
 
 Download the latest version [here](https://github.com/androettop/parasync/releases).
 
-Android version now available in the [Google Play Store](https://play.google.com/store/apps/details?id=com.androettop.parasync).
-
-iOS & Meta Quest versions will be available soon.
+The Android version is now available in the [Google Play Store](https://play.google.com/store/apps/details?id=com.androettop.parasync).
 
 ## 🧩 Features
 
@@ -21,6 +19,7 @@ iOS & Meta Quest versions will be available soon.
 - 🎵 Supports Paradiddle song files.
 - 📂 Built-in tool for downloading and managing song libraries.
 - 🌐 Allows configuration of remote song libraries to browse and fetch new content, you can see an example [here](https://gist.github.com/androettop/765e909d37c2b562245d2458713c6223).
+- 🖥️ Available for Windows, macOS, Linux, and Android, iOS & Meta Quest versions will be available soon.
 
 ## 📢 Disclaimer
 
