@@ -2,7 +2,7 @@ use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use crossbeam_channel::{unbounded, bounded, Sender, Receiver};
 use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink, Source};
-use std::{fs::File, io::BufReader, path::Path, sync::Arc, time::Instant, time::Duration};
+use std::{fs::File, io::BufReader, path::Path, time::Instant};
 use serde::Serialize;
 
 // ---------- API pública (lo que usarán los comandos Tauri) ----------
@@ -11,20 +11,21 @@ pub static AUDIO: Lazy<AudioService> = Lazy::new(|| AudioService::new());
 
 #[derive(Serialize, Clone, Copy)]
 pub struct AudioStatus {
-    pub duration_secs: f64,
     pub position_secs: f64,
     pub is_playing: bool,
 }
 
 pub struct AudioService {
     tx: Sender<AudioCmd>,
-    shared: Arc<Mutex<Shared>>,
+    shared: ArcShared,
 }
+
+type ArcShared = std::sync::Arc<Mutex<Shared>>;
 
 impl AudioService {
     fn new() -> Self {
         let (tx, rx) = unbounded::<AudioCmd>();
-        let shared = Arc::new(Mutex::new(Shared::default()));
+        let shared = std::sync::Arc::new(Mutex::new(Shared::default()));
         std::thread::spawn({
             let shared = shared.clone();
             move || audio_thread(rx, shared)
@@ -76,9 +77,8 @@ impl AudioService {
                 pos_frames += (Instant::now() - t0).as_secs_f64() * sh.out_sample_rate as f64;
             }
         }
-        let pos = (pos_frames / sr).min(sh.total_frames as f64 / sr);
+        let pos = pos_frames / sr;
         AudioStatus {
-            duration_secs: sh.total_frames as f64 / sr,
             position_secs: pos,
             is_playing: sh.is_playing,
         }
@@ -99,7 +99,7 @@ enum AudioCmd {
 #[derive(Default)]
 struct Shared {
     out_sample_rate: u32,
-    total_frames: usize,     // frames destino (dispositivo)
+    total_frames: usize,     // opcional: si lo conoces, se usa para clamps (0 = desconocido)
     pos_frames_base: usize,  // frames acumulados (no incluye el dt de reproducción en curso)
     play_started_at: Option<Instant>,
     is_playing: bool,
@@ -116,9 +116,9 @@ struct Engine {
     out_sr: u32,
     out_ch: u16,
 
-    // streaming: guardamos rutas y duración estimada
+    // streaming: guardamos rutas
     paths: Vec<String>,
-    total_frames: usize,   // estimación a sample rate de salida
+    total_frames: usize,   // 0 = desconocido (no lo devolvemos)
 
     sink: Option<Sink>,
     state: PlayState,
@@ -128,10 +128,10 @@ struct Engine {
     // mezcla
     block_frames: usize,   // tamaño de bloque para render (p.ej. 1024)
 
-    shared: Arc<Mutex<Shared>>,
+    shared: ArcShared,
 }
 
-fn audio_thread(rx: Receiver<AudioCmd>, shared: Arc<Mutex<Shared>>) {
+fn audio_thread(rx: Receiver<AudioCmd>, shared: ArcShared) {
     let (sr, ch) = default_output_format().unwrap_or((48000, 2));
     let mut eng = Engine {
         stream: None,
@@ -178,7 +178,7 @@ impl Engine {
     fn push_shared(&self) {
         let mut sh = self.shared.lock();
         sh.out_sample_rate = self.out_sr;
-        sh.total_frames = self.total_frames;
+        sh.total_frames = self.total_frames; // retenemos por si lo usas internamente (no se devuelve)
         sh.pos_frames_base = self.pos_frames;
         sh.play_started_at = self.play_started_at;
         sh.is_playing = self.state == PlayState::Playing;
@@ -194,27 +194,12 @@ impl Engine {
         Ok(())
     }
 
-    // Carga "ligera": solo guarda rutas y calcula duración estimada (máx entre pistas)
+    // Carga "ligera": solo guarda rutas; NO calcula duración
     fn prepare_streaming(&mut self, paths: Vec<String>) -> Result<(), String> {
         self.ensure_output()?;
         if paths.is_empty() { return Err("Se requiere al menos una ruta de audio".into()); }
         self.paths = paths;
-
-        // Estimar duración leyendo metadata de cada pista
-        let mut max_secs = 0.0_f64;
-        for p in &self.paths {
-            let path = Path::new(p);
-            let file = File::open(path).map_err(|e| format!("No se pudo abrir {p}: {e}"))?;
-            let decoder = Decoder::new(BufReader::new(file))
-                .map_err(|e| format!("No se pudo decodificar {p}: {e}"))?;
-            if let Some(d) = decoder.total_duration() {
-                max_secs = max_secs.max(d.as_secs_f64());
-            } else {
-                // Si no se conoce, deja 0; el status mostrará 0 hasta play.
-            }
-        }
-
-        self.total_frames = (max_secs * self.out_sr as f64).round() as usize;
+        self.total_frames = 0; // desconocido (la tienes en el frontend)
         self.pos_frames = 0;
         self.state = PlayState::Stopped;
         self.kill_sink();
@@ -226,9 +211,7 @@ impl Engine {
         if self.paths.is_empty() { return Err("No hay audio cargado".into()); }
 
         match self.state {
-            PlayState::Playing => {
-                // ya está
-            }
+            PlayState::Playing => {}
             PlayState::Paused => {
                 if let Some(sink) = &self.sink { sink.play(); }
                 else {
@@ -252,7 +235,11 @@ impl Engine {
             if let Some(t0) = self.play_started_at.take() {
                 let dt = t0.elapsed();
                 let adv = (dt.as_secs_f64() * self.out_sr as f64).round() as usize;
-                self.pos_frames = (self.pos_frames + adv).min(self.total_frames);
+                self.pos_frames = if self.total_frames > 0 {
+                    (self.pos_frames + adv).min(self.total_frames)
+                } else {
+                    self.pos_frames + adv
+                };
             }
             if let Some(sink) = &self.sink { sink.pause(); }
             self.state = PlayState::Paused;
@@ -302,13 +289,6 @@ impl Engine {
             self.block_frames,
             start_sec,
         )?;
-        // Si durante load no había duración, intenta rellenarla ahora
-        if self.total_frames == 0 {
-            if let Some(d) = src.estimated_duration() {
-                self.total_frames = (d.as_secs_f64() * self.out_sr as f64).round() as usize;
-            }
-        }
-
         let sink = Sink::try_new(handle).map_err(|e| format!("No se pudo crear Sink: {e}"))?;
         sink.append(src);
         sink.play();
@@ -331,8 +311,6 @@ struct MixedSource {
     buf: Vec<f32>,
     buf_pos: usize,
     finished: bool,
-    // info aux
-    max_duration: Option<Duration>,
     // seguridad/volumen: pequeño headroom para evitar clip duro al sumar
     headroom: f32,
 }
@@ -346,7 +324,6 @@ impl MixedSource {
         start_sec: f64,
     ) -> Result<Self, String> {
         let mut tracks = Vec::with_capacity(paths.len());
-        let mut max_dur = 0.0_f64;
 
         for p in paths {
             let path = Path::new(&p);
@@ -356,18 +333,12 @@ impl MixedSource {
 
             let in_ch = decoder.channels() as usize;
             let in_sr = decoder.sample_rate();
-            let total_dur = decoder.total_duration(); // <-- tomar duración antes de consumir el decoder
 
             let src = decoder.convert_samples::<f32>();
             let mut trk = TrackStream::new(Box::new(src), in_ch, in_sr, out_ch as usize, out_sr);
-            trk.total_duration = total_dur;          // <-- guardar en el track (mismo módulo)
             trk.skip_to_seconds(start_sec);
 
-            if let Some(d) = total_dur {             // <-- usar la variable, no `trk` tras el move
-                max_dur = max_dur.max(d.as_secs_f64());
-            }
-            tracks.push(trk); // move ocurre aquí, sin lecturas posteriores
-
+            tracks.push(trk);
         }
 
         Ok(Self {
@@ -378,13 +349,8 @@ impl MixedSource {
             buf: Vec::new(),
             buf_pos: 0,
             finished: false,
-            max_duration: if max_dur > 0.0 { Some(Duration::from_secs_f64(max_dur)) } else { None },
             headroom: 0.8, // ~ -1.9 dB
         })
-    }
-
-    fn estimated_duration(&self) -> Option<Duration> {
-        self.max_duration
     }
 
     fn fill_block(&mut self) {
@@ -436,7 +402,7 @@ impl Source for MixedSource {
     #[inline] fn current_frame_len(&self) -> Option<usize> { None }
     #[inline] fn channels(&self) -> u16 { self.out_ch }
     #[inline] fn sample_rate(&self) -> u32 { self.out_sr }
-    #[inline] fn total_duration(&self) -> Option<Duration> { self.max_duration }
+    #[inline] fn total_duration(&self) -> Option<std::time::Duration> { None } // no devolvemos duración
 }
 
 // ---------- Track con remuestreo lineal incremental ----------
@@ -446,6 +412,7 @@ struct TrackStream {
     in_ch: usize,
     in_sr: u32,
     out_ch: usize,
+    out_sr: u32,
 
     // remuestreo incremental
     ratio: f64,    // in_sr / out_sr
@@ -453,9 +420,6 @@ struct TrackStream {
     last: Vec<f32>,// frame anterior (len = in_ch)
     next: Vec<f32>,// frame siguiente (len = in_ch)
     at_end: bool,  // true si ya no quedan muestras en src
-
-    // meta
-    total_duration: Option<Duration>,
 }
 
 impl TrackStream {
@@ -466,7 +430,6 @@ impl TrackStream {
         out_ch: usize,
         out_sr: u32,
     ) -> Self {
-        // Duración desconocida aquí (rodio::Decoder la conocíamos antes)
         let mut me = Self {
             src,
             in_ch,
@@ -478,7 +441,6 @@ impl TrackStream {
             last: vec![0.0; in_ch],
             next: vec![0.0; in_ch],
             at_end: false,
-            total_duration: None,
         };
         // Prellenar dos frames iniciales
         me.last = me.read_frame();
@@ -514,7 +476,6 @@ impl TrackStream {
                 Some(s) => frame[c] = s,
                 None => {
                     self.at_end = true;
-                    // Rellenar resto con ceros
                     for k in c..self.in_ch { frame[k] = 0.0; }
                     break;
                 }
@@ -529,7 +490,6 @@ impl TrackStream {
         let ch_in = self.in_ch;
         let mut any_nonzero = false;
 
-        // mezcla en out (intercalado)
         for f in 0..frames {
             // avanzar en función de ratio
             while self.phase >= 1.0 && !self.at_end {
@@ -539,8 +499,6 @@ impl TrackStream {
             }
             let alpha = self.phase as f32;
 
-            // interpolación lineal por canal de entrada
-            let mut mono = 0.0f32;
             if ch_in == 2 && ch_out >= 2 {
                 // Estéreo preservado
                 let l = self.last[0] + (self.next[0] - self.last[0]) * alpha;
@@ -548,13 +506,13 @@ impl TrackStream {
                 let idx = f * ch_out;
                 out[idx] += l;
                 out[idx + 1] += r;
-                // si hay más canales de salida, duplicamos L/R
                 for c in 2..ch_out {
                     out[idx + c] += if c % 2 == 0 { l } else { r };
                 }
                 any_nonzero |= l != 0.0 || r != 0.0;
             } else {
                 // downmix a mono y upmix a out_ch
+                let mut mono = 0.0f32;
                 for c in 0..ch_in {
                     let v = self.last[c] + (self.next[c] - self.last[c]) * alpha;
                     mono += v;
@@ -569,12 +527,10 @@ impl TrackStream {
 
             self.phase += self.ratio;
             if self.at_end && self.phase >= 1.0 {
-                // ya no hay más frames que interpolar
-                // dejamos que el bucle siga sumando ceros
+                // ya no hay más frames que interpolar; seguirá sumando ceros
             }
         }
 
-        // Consideramos activo si no hemos agotado completamente
         any_nonzero || !self.at_end
     }
 }
