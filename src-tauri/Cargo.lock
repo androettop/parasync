@@ -2828,6 +2828,7 @@ name = "parasync"
 version = "0.1.0"
 dependencies = [
  "cpal",
+ "libc",
  "once_cell",
  "serde",
  "serde_json",
