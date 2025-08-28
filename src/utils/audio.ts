@@ -1,5 +1,7 @@
 export type AudioStatus = {
   duration: number;
+  position: number;
+  is_playing: boolean;
 };
 
 const audioCache: Record<string, RustAudio> = {};
@@ -26,18 +28,28 @@ export class RustAudio {
     return audio;
   }
 
-  async play(): Promise<void> {
+  async play(position?: number): Promise<void> {
     await window.__TAURI_INTERNALS__.invoke("play_audio", {
       path: this._path,
+      position: position ?? null,
     } as any);
     this._playing = true;
+
+    // Iniciar actualizaciones periódicas de posición
+    this.startPositionUpdates();
   }
 
   async pause(): Promise<void> {
+    // Primero actualizar la posición desde el backend antes de pausar
+    await this.syncPositionFromBackend();
+
     await window.__TAURI_INTERNALS__.invoke("pause_audio", {
       path: this._path,
     } as any);
     this._playing = false;
+
+    // Detener actualizaciones de posición
+    this.stopPositionUpdates();
   }
 
   async stop(): Promise<void> {
@@ -46,6 +58,9 @@ export class RustAudio {
     } as any);
     this._playing = false;
     this._position = 0;
+
+    // Detener actualizaciones de posición
+    this.stopPositionUpdates();
   }
 
   async seek(position: number): Promise<void> {
@@ -67,12 +82,46 @@ export class RustAudio {
     } as any);
   }
 
+  private startPositionUpdates(): void {
+    // Detener cualquier intervalo existente
+    this.stopPositionUpdates();
+
+    // Actualizar posición cada 100ms cuando está reproduciendo
+    this._updateInterval = window.setInterval(async () => {
+      if (this._playing) {
+        await this.syncPositionFromBackend();
+      }
+    }, 100);
+  }
+
+  private stopPositionUpdates(): void {
+    if (this._updateInterval) {
+      clearInterval(this._updateInterval);
+      this._updateInterval = null;
+    }
+  }
+
+  private async syncPositionFromBackend(): Promise<void> {
+    try {
+      const status: AudioStatus = await window.__TAURI_INTERNALS__.invoke(
+        "get_audio_status",
+        { path: this._path } as any,
+      );
+      this._position = status.position;
+      this._playing = status.is_playing;
+    } catch (error) {
+      console.warn(`Failed to sync position for ${this._path}:`, error);
+    }
+  }
+
   async updateStatus(): Promise<void> {
     const status: AudioStatus = await window.__TAURI_INTERNALS__.invoke(
       "get_audio_status",
       { path: this._path } as any,
     );
     this._duration = status.duration;
+    this._position = status.position;
+    this._playing = status.is_playing;
   }
 
   // Getters/Setters para volume
@@ -105,7 +154,8 @@ export class RustAudio {
 
   set playing(value: boolean) {
     if (value && !this._playing) {
-      this.play();
+      // When resuming, play from current position
+      this.play(this._position);
     } else if (!value && this._playing) {
       this.pause();
     }
@@ -121,10 +171,20 @@ export class RustAudio {
     return this._path;
   }
 
-  estimatePosition(deltaTime: number): void {
+  updatePosition(deltaTime: number): void {
     if (this._playing) {
       // deltaTime probablemente viene en milisegundos, convertir a segundos
       this._position += deltaTime / 1000;
+      // Asegurarse de que no exceda la duración
+      if (this._duration > 0 && this._position > this._duration) {
+        this._position = this._duration;
+        this._playing = false; // El audio ha terminado
+      }
     }
+  }
+
+  // Mantener estimatePosition por compatibilidad
+  estimatePosition(deltaTime: number): void {
+    this.updatePosition(deltaTime);
   }
 }
