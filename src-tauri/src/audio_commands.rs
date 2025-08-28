@@ -34,3 +34,21 @@ pub fn dispose_audio() -> Result<(), String> {
 pub fn audio_status() -> Result<AudioStatus, String> {
     Ok(AUDIO.status())
 }
+
+#[tauri::command]
+pub fn set_tracks_gain_by_path(
+    paths: Vec<String>,
+    gain: f32,
+    ramp_ms: Option<u32>,
+) -> Result<(), String> {
+    AUDIO.set_tracks_gain_by_path(paths, gain, ramp_ms)
+}
+
+#[tauri::command]
+pub fn mute_tracks_by_path(
+    paths: Vec<String>,
+    muted: bool,
+    ramp_ms: Option<u32>,
+) -> Result<(), String> {
+    AUDIO.mute_tracks_by_path(paths, muted, ramp_ms)
+}
