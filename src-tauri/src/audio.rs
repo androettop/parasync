@@ -52,7 +52,6 @@ impl AudioPlayer {
         let cached_status = Arc::new(Mutex::new(AudioStatus {
             position: 0.0,
             duration,
-            playing: false,
         }));
         
         Ok(Self {
@@ -208,7 +207,6 @@ fn run_audio_player(
             // Actualizar cache de status para mejor performance
             if let Ok(mut cache) = cached_status.try_lock() {
                 cache.position = *pos_clone.lock().unwrap();
-                cache.playing = *decoder_playing.lock().unwrap();
             }
             
             // Sleep más corto para mejor responsividad
@@ -604,7 +602,6 @@ pub fn set_volume(id: AudioId, volume: f32) -> Result<(), String> {
 pub struct AudioStatus {
     position: f64,
     duration: f64,
-    playing: bool,
 }
 
 #[tauri::command]
@@ -618,21 +615,18 @@ pub fn get_audio_status(id: AudioId) -> Result<AudioStatus, String> {
             Ok(AudioStatus {
                 position: cached.position,
                 duration: cached.duration,
-                playing: cached.playing,
             })
         } else {
             // Fallback si no se puede acceder al cache
             Ok(AudioStatus {
                 position: *player.position.lock().unwrap(),
                 duration: track.duration,
-                playing: *player.playing.lock().unwrap(),
             })
         }
     } else {
         Ok(AudioStatus {
             position: 0.0,
             duration: track.duration,
-            playing: false,
         })
     }
 }
