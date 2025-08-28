@@ -28,11 +28,11 @@ class ProgressBar extends Actor {
     this.progressBarActor.scale.x = progress;
   }
 
-  private getRelativeX(x: number) {
-    return x - (GAME_CONFIG.width - GAME_CONFIG.highwayWidth) / 2;
-  }
+  // private getRelativeX(x: number) {
+  //   return x - (GAME_CONFIG.width - GAME_CONFIG.highwayWidth) / 2;
+  // }
 
-  public onInitialize(engine: Game) {
+  public onInitialize(_engine: Game) {
     this.graphics.use(Sprite.from(Resources.ProgressBarEmpty));
     this.progressBarActor = new Actor({
       pos: vec(-GAME_CONFIG.highwayWidth / 2, 0),
