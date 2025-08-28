@@ -45,7 +45,7 @@ class MainScene extends Scene {
 
     // process notes to make it easier to use
     const { notes, instruments } = processNotesAndInstruments(
-      engine.song.events
+      engine.song.events,
     );
 
     // Add the Highway
@@ -55,7 +55,7 @@ class MainScene extends Scene {
     this.startBtn = new Button(
       vec(GAME_CONFIG.width / 2, GAME_CONFIG.height / 2),
       Resources.StartBtn,
-      () => this.startSong(engine)
+      () => this.startSong(engine),
     );
 
     // Create the progress bar
@@ -66,7 +66,7 @@ class MainScene extends Scene {
     // Position of the first button
     const firstButtonPos = vec(
       (GAME_CONFIG.width - GAME_CONFIG.highwayWidth) / 2 + buttonWidth / 2,
-      GAME_CONFIG.highwayHeight + 60
+      GAME_CONFIG.highwayHeight + 60,
     );
 
     // Create play button
@@ -76,8 +76,8 @@ class MainScene extends Scene {
         Resources.PlayBtn,
         () => engine.songPlay(),
         Resources.PlayOffBtn,
-        () => engine.isPlaying()
-      )
+        () => engine.isPlaying(),
+      ),
     );
 
     // Create pause button
@@ -87,8 +87,8 @@ class MainScene extends Scene {
         Resources.PauseBtn,
         () => engine.songPause(),
         Resources.PauseOffBtn,
-        () => !engine.isPlaying()
-      )
+        () => !engine.isPlaying(),
+      ),
     );
 
     // Create stop button
@@ -97,12 +97,11 @@ class MainScene extends Scene {
         firstButtonPos.add(vec(buttonWidth * 2, 0)),
         Resources.StopBtn,
         () => {
-          engine.songPause();
-          engine.songSeek(0);
+          engine.songStop();
         },
         Resources.StopOffBtn,
-        () => engine.getPlaybackPosition() === 0 && !engine.isPlaying()
-      )
+        () => engine.getPlaybackPosition() === 0 && !engine.isPlaying(),
+      ),
     );
 
     // Create drums button
@@ -123,7 +122,7 @@ class MainScene extends Scene {
           drumsBtn.graphics.use(Sprite.from(Resources.DrumsBtn));
           engine.unmuteDrums();
         }
-      }
+      },
     );
     this.add(drumsBtn);
 
@@ -135,8 +134,8 @@ class MainScene extends Scene {
         () => {
           engine.songPause();
           engine.exitHandler();
-        }
-      )
+        },
+      ),
     );
   }
 }

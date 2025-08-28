@@ -51,6 +51,12 @@ class Game extends Engine {
     this.songAudioManager?.pause();
   }
 
+  public songStop() {
+    this.songAudioManager?.dispose();
+    this.songAudioManager = this.createAudioManager();
+    this.songAudioManager.load();
+  }
+
   public songSeek(_progress: number) {
     // TODO: to be implemented, seek in streamings is suuuuuper slow
   }
@@ -84,8 +90,8 @@ class Game extends Engine {
     return this.songAudioManager?.isPlaying || false;
   }
 
-  async initialize() {
-    this.songAudioManager = new SongAudioManager(
+  private createAudioManager(): SongAudioManager {
+    const songAudioManager = new SongAudioManager(
       this.song.audioFileData.songTracks.map(
         (trackName) => `${this.songDirPath}/${trackName}`,
       ),
@@ -94,6 +100,11 @@ class Game extends Engine {
       ),
       this.song.recordingMetadata.length,
     );
+    return songAudioManager;
+  }
+
+  async initialize() {
+    this.songAudioManager = this.createAudioManager();
 
     this.cover = new ImageFile(
       `${this.songDirPath}/${this.song.recordingMetadata.coverImagePath}`,
