@@ -16,5 +16,5 @@ export const GAME_CONFIG = {
     "BP_Ride20_C",
   ],
   notesSpeed: 0.4, // px/ms
-  notesBatchSize: 10, // seconds
+  notesBatchSize: 20, // seconds
 };

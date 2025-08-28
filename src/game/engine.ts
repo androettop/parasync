@@ -3,7 +3,7 @@ import {
   DisplayMode,
   Engine,
   ImageSource,
-  ScrollPreventionMode
+  ScrollPreventionMode,
 } from "excalibur";
 import { ParadiddleSong } from "../types/songs";
 import { RustAudio } from "../utils/audio";
@@ -91,12 +91,16 @@ class Game extends Engine {
   }
 
   async initialize() {
-    this.songTracks = await Promise.all(this.song.audioFileData.songTracks.map(
-      async (trackName) => RustAudio.load(`${this.songDirPath}/${trackName}`),
-    ));
-    this.drumTracks = await Promise.all(this.song.audioFileData.drumTracks.map(
-      async (trackName) => RustAudio.load(`${this.songDirPath}/${trackName}`),
-    ));
+    this.songTracks = await Promise.all(
+      this.song.audioFileData.songTracks.map(async (trackName) =>
+        RustAudio.load(`${this.songDirPath}/${trackName}`),
+      ),
+    );
+    this.drumTracks = await Promise.all(
+      this.song.audioFileData.drumTracks.map(async (trackName) =>
+        RustAudio.load(`${this.songDirPath}/${trackName}`),
+      ),
+    );
 
     this.cover = new ImageFile(
       `${this.songDirPath}/${this.song.recordingMetadata.coverImagePath}`,
@@ -129,7 +133,7 @@ class Game extends Engine {
       } else {
         this.setupReleaseFilesInterval();
       }
-    }, 2000);
+    }, 500);
   }
 
   private releaseResources() {
