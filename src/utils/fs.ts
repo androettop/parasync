@@ -1,14 +1,7 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import {
-  readDir,
-  readTextFile,
-  readFile,
-  writeFile,
-  mkdir,
-} from "@tauri-apps/plugin-fs";
+import { readDir, readTextFile, readFile, mkdir } from "@tauri-apps/plugin-fs";
 import { Difficulty, LocalSong, ParadiddleSong, Song } from "../types/songs";
 import { v4 as uuid } from "uuid";
-import JSZip from "jszip";
 
 export const selectSongsDirectory = async () => {
   const file = await open({
@@ -100,7 +93,7 @@ export const getLocalSongs = async (
   const entries = await readDir(songsFolder);
   const songs: LocalSong[] = [];
   for (const entry of entries) {
-    if (entry.isDirectory) {
+    if (entry.isDirectory && entry.name !== ".tmp") {
       const localSong = await loadSong(songsFolder, entry.name);
       if (localSong) {
         songs.push(localSong);
@@ -125,25 +118,4 @@ export const getSongFolderPrefix = (
   repoName: string,
 ): string => {
   return `${repoName}-${songId}-`;
-};
-
-export const unzipSong = async (
-  songsPath: string,
-  songId: string,
-  repoName: string,
-  zip: Blob,
-): Promise<void> => {
-  const zipFile = await JSZip.loadAsync(zip);
-  const files = Object.keys(zipFile.files);
-  const folderPrefix = getSongFolderPrefix(songId, repoName);
-  for (const file of files) {
-    const content = await zipFile.file(file)?.async("uint8array");
-    if (content) {
-      const fileDirPath = file.split("/").slice(0, -1).join("/");
-      console.log(`Unzipping ${file} to ${songsPath}/${folderPrefix}${file}`);
-      await ensureDir(`${songsPath}/${folderPrefix}${fileDirPath}`);
-      // the directory may not exist, so we create it if it doesn't
-      await writeFile(`${songsPath}/${folderPrefix}${file}`, content);
-    }
-  }
 };

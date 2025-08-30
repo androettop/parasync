@@ -11,14 +11,14 @@ pub static DOWNLOADS: Lazy<DownloadsService> = Lazy::new(DownloadsService::new);
 /// Structure that the frontend will consume to display status
 #[derive(Debug, Clone, Serialize)]
 pub struct DownloadStatus {
-    pub key: String,                 // == folder_prefix (p.ej. "RepoA-1234")
+    pub key: String,                 // == folder_prefix (e.g. "RepoA-1234")
     pub bytes_downloaded: u64,
     pub total_bytes: Option<u64>,    // Content-Length if available
     pub progress: f32,               // 0..=1 (download); 1.0 when download finishes
     pub extracting: bool,            // true while ZIP is being extracted
 }
 
-/// API del servicio (envoltorio fino sobre el manager interno)
+/// Public API (thin wrapper over the internal manager)
 pub struct DownloadsService {
     inner: Arc<ManagerInner>,
 }
@@ -83,7 +83,7 @@ struct ManagerInner {
 
 impl ManagerInner {
     fn new() -> Self {
-        // reqwest with rustls (recommended for portability). The user must enable the feature in Cargo.toml.
+        // reqwest with rustls (recommended for portability). Enable in Cargo.toml.
         let client = reqwest::Client::builder()
             .user_agent("ParasyncDownloader/1.0")
             .redirect(reqwest::redirect::Policy::limited(10))
@@ -98,24 +98,17 @@ impl ManagerInner {
     }
 
     fn start(self: &Arc<Self>, key: String, download_url: String, dest_root: String) -> Result<(), String> {
-        // Previous validations
-        if key.trim().is_empty() {
-            return Err("empty key".into());
-        }
-        if download_url.trim().is_empty() {
-            return Err("empty download_url".into());
-        }
-        if dest_root.trim().is_empty() {
-            return Err("empty dest_root".into());
+        if key.trim().is_empty() { return Err("empty key".into()); }
+        if download_url.trim().is_empty() { return Err("empty download_url".into()); }
+        if dest_root.trim().is_empty() { return Err("empty dest_root".into()); }
+
+        // 1) Reject if already downloaded: any directory in dest_root starting with "{key}-"
+        if has_existing_with_key_prefix(Path::new(&dest_root), &key)
+            .map_err(|e| format!("Failed to scan destination: {e}"))? {
+            return Err(format!("Song '{key}' is already downloaded in {}", dest_root));
         }
 
-        // 1) Check if final destination already exists -> NO re-download allowed
-        let final_dir = Path::new(&dest_root).join(&key);
-        if final_dir.exists() {
-            return Err(format!("Song '{key}' is already downloaded in {}", final_dir.display()));
-        }
-
-        // 2) Check if there's already an active task for that key
+        // 2) Reject if already downloading
         {
             let mut tasks = self.tasks.lock();
             if tasks.contains_key(&key) {
@@ -164,7 +157,7 @@ impl ManagerInner {
             }
         };
 
-        // Create temporary folder per key: dest_root/.tmp/<key>/
+        // temp: dest_root/.tmp/<key>/
         let tmp_dir = Path::new(&dest_root).join(".tmp").join(&key);
         if let Err(e) = fs::create_dir_all(&tmp_dir) {
             self.remove_task(&key);
@@ -173,10 +166,9 @@ impl ManagerInner {
         }
         let tmp_zip_part = tmp_dir.join("file.zip.part");
         let tmp_zip = tmp_dir.join("file.zip");
-        let final_dir = Path::new(&dest_root).join(&key);
+        let extract_root = tmp_dir.join("extract");
 
-        // --- STREAMING DOWNLOAD ---
-        // GET
+        // --- DOWNLOAD (streaming) ---
         let resp = match self.client.get(&download_url).send().await {
             Ok(r) => r,
             Err(e) => {
@@ -194,13 +186,11 @@ impl ManagerInner {
             return Err(format!("Server responded {code} for {download_url}"));
         }
 
-        // total if available
         {
             let mut pg = progress.lock();
             pg.total_bytes = resp.content_length();
         }
 
-        // open async file and write chunks
         let mut out = match tokio::fs::File::create(&tmp_zip_part).await {
             Ok(f) => f,
             Err(e) => {
@@ -219,9 +209,8 @@ impl ManagerInner {
                         let _ = fs::remove_dir_all(&tmp_dir);
                         self.remove_task(&key);
                         drop(permit);
-                        return Err(format!("Error escribiendo archivo: {e}"));
+                        return Err(format!("Error writing file: {e}"));
                     }
-                    // update progress
                     let mut pg = progress.lock();
                     pg.bytes_downloaded = pg.bytes_downloaded.saturating_add(bytes.len() as u64);
                 }
@@ -229,12 +218,11 @@ impl ManagerInner {
                     let _ = fs::remove_dir_all(&tmp_dir);
                     self.remove_task(&key);
                     drop(permit);
-                    return Err(format!("Error recibiendo datos: {e}"));
+                    return Err(format!("Error receiving data: {e}"));
                 }
             }
         }
 
-        // close/rename
         if let Err(e) = out.flush().await {
             let _ = fs::remove_dir_all(&tmp_dir);
             self.remove_task(&key);
@@ -249,63 +237,119 @@ impl ManagerInner {
             return Err(format!("Could not rename temporary ZIP: {e}"));
         }
 
-        // --- EXTRACTION (blocking, send to blocking pool) ---
+        // --- Determine original top-level folder name (ignore __MACOSX) ---
+        let original_root_dir = detect_zip_primary_top_level_dir(&tmp_zip)
+            .map_err(|e| {
+                // cleanup
+                let _ = fs::remove_dir_all(&tmp_dir);
+                e
+            })?;
+
+        // Final directory name = "key-original"
+        let final_name = format!("{}-{}", key, original_root_dir);
+        let final_dir = Path::new(&dest_root).join(&final_name);
+
+        // Re-check "already downloaded" condition with the exact final path
+        if final_dir.exists() {
+            let _ = fs::remove_dir_all(&tmp_dir);
+            self.remove_task(&key);
+            drop(permit);
+            return Err(format!("Song '{}' is already downloaded at {}", key, final_dir.display()));
+        }
+
+        // --- EXTRACTION ---
         {
             let mut pg = progress.lock();
             pg.extracting = true; // boolean only
         }
 
+        if let Err(e) = fs::create_dir_all(&extract_root) {
+            let _ = fs::remove_dir_all(&tmp_dir);
+            self.remove_task(&key);
+            drop(permit);
+            return Err(format!("Could not create extract dir: {e}"));
+        }
+
+        // Extract loose into extract_root
         let unzip_res = {
             let tmp_zip = tmp_zip.clone();
-            let final_dir = final_dir.clone();
-            spawn_blocking(move || unzip_zip_to(&tmp_zip, &final_dir))
+            let extract_root = extract_root.clone();
+            spawn_blocking(move || unzip_zip_to(&tmp_zip, &extract_root))
                 .await
-                .map_err(|join_err| format!("Fallo interno al extraer: {join_err}"))?
+                .map_err(|join_err| format!("Internal extraction error: {join_err}"))?
         };
 
-        match unzip_res {
+        if let Err(e) = unzip_res {
+            let _ = fs::remove_file(&tmp_zip);
+            let _ = fs::remove_dir_all(&tmp_dir);
+            self.remove_task(&key);
+            drop(permit);
+            return Err(format!("Error extracting ZIP: {e}"));
+        }
+
+        // Move/rename "<extract_root>/<original_root_dir>" -> "<dest_root>/<key>-<original_root_dir>"
+        let extracted_src = extract_root.join(&original_root_dir);
+        match move_dir(&extracted_src, &final_dir) {
             Ok(()) => {
                 // cleanup
                 let _ = fs::remove_file(&tmp_zip);
                 let _ = fs::remove_dir_all(&tmp_dir);
-                // remove from manager
                 self.remove_task(&key);
                 drop(permit);
                 Ok(())
             }
             Err(e) => {
-                // cleanup (don't touch final_dir if something was partially created)
                 let _ = fs::remove_file(&tmp_zip);
                 let _ = fs::remove_dir_all(&tmp_dir);
                 self.remove_task(&key);
                 drop(permit);
-                Err(format!("Error extracting ZIP: {e}"))
+                Err(format!("Failed to move extracted folder: {e}"))
             }
         }
     }
 }
 
-/// Extracts a ZIP to `dest_dir` with zip-slip defense.
-/// Creates `dest_dir` if it doesn't exist; fails if it already existed (to respect "no overwrite" rule).
-fn unzip_zip_to(zip_path: &Path, dest_dir: &Path) -> Result<(), String> {
-    if dest_dir.exists() {
-        return Err(format!("Destination already exists: {}", dest_dir.display()));
+/// Checks if there is any directory inside `dest_root` whose name starts with "{key}-".
+fn has_existing_with_key_prefix(dest_root: &Path, key: &str) -> io::Result<bool> {
+    let prefix = format!("{key}-");
+    let rd = match fs::read_dir(dest_root) {
+        Ok(rd) => rd,
+        Err(e) => {
+            // If dest_root doesn't exist, treat as no match
+            if e.kind() == io::ErrorKind::NotFound { return Ok(false); }
+            return Err(e);
+        }
+    };
+    for entry in rd {
+        if let Ok(ent) = entry {
+            let name = ent.file_name();
+            let name = name.to_string_lossy();
+            if name.starts_with(&prefix) {
+                if let Ok(md) = ent.metadata() {
+                    if md.is_dir() { return Ok(true); }
+                }
+            }
+        }
     }
-    fs::create_dir_all(dest_dir).map_err(|e| format!("Could not create destination {}: {e}", dest_dir.display()))?;
+    Ok(false)
+}
 
+/// Extracts a ZIP to `dest_root` (loose). Zip-slip protected.
+/// Does NOT pre-create a dedicated final folder; it will mirror the ZIP structure under dest_root.
+fn unzip_zip_to(zip_path: &Path, dest_root: &Path) -> Result<(), String> {
     let file = fs::File::open(zip_path).map_err(|e| format!("Could not open ZIP {}: {e}", zip_path.display()))?;
     let mut zip = zip::ZipArchive::new(file).map_err(|e| format!("Invalid ZIP: {e}"))?;
 
     for i in 0..zip.len() {
         let mut entry = zip.by_index(i).map_err(|e| format!("Invalid ZIP entry: {e}"))?;
 
-        // zip-slip defense: enclosed_name returns None if there are dangerous paths
+        // zip-slip defense
         let relpath = match entry.enclosed_name() {
             Some(p) => p.to_owned(),
             None => return Err(format!("Unsafe ZIP path in entry #{i}")),
         };
 
-        let out_path = dest_dir.join(relpath);
+        let out_path = dest_root.join(relpath);
 
         if entry.name().ends_with('/') {
             fs::create_dir_all(&out_path).map_err(|e| format!("Could not create dir {}: {e}", out_path.display()))?;
@@ -313,12 +357,10 @@ fn unzip_zip_to(zip_path: &Path, dest_dir: &Path) -> Result<(), String> {
             if let Some(parent) = out_path.parent() {
                 fs::create_dir_all(parent).map_err(|e| format!("Could not create dir {}: {e}", parent.display()))?;
             }
-            // copy bytes
             let mut outfile = fs::File::create(&out_path)
                 .map_err(|e| format!("Could not create file {}: {e}", out_path.display()))?;
             io::copy(&mut entry, &mut outfile)
                 .map_err(|e| format!("Error writing {}: {e}", out_path.display()))?;
-            // preserve permissions if they come in the ZIP
             #[cfg(unix)]
             {
                 use std::os::unix::fs::PermissionsExt;
@@ -329,6 +371,64 @@ fn unzip_zip_to(zip_path: &Path, dest_dir: &Path) -> Result<(), String> {
         }
     }
 
+    Ok(())
+}
+
+/// Detects the primary top-level directory name inside the ZIP (ignores "__MACOSX").
+/// Returns its name (e.g., "MySongFolder") or error if not a single, clear folder.
+fn detect_zip_primary_top_level_dir(zip_path: &Path) -> Result<String, String> {
+    let file = fs::File::open(zip_path).map_err(|e| format!("Could not open ZIP {}: {e}", zip_path.display()))?;
+    let mut zip = zip::ZipArchive::new(file).map_err(|e| format!("Invalid ZIP: {e}"))?;
+
+    use std::collections::HashSet;
+    let mut tops: HashSet<String> = HashSet::new();
+
+    for i in 0..zip.len() {
+        let entry = zip.by_index(i).map_err(|e| format!("Invalid ZIP entry: {e}"))?;
+        let rel = entry.enclosed_name().ok_or_else(|| format!("Unsafe path in ZIP entry #{i}"))?;
+        if let Some(first) = rel.components().next() {
+            let top = first.as_os_str().to_string_lossy().to_string();
+            // ignore macOS resource directory
+            if top != "__MACOSX" {
+                tops.insert(top);
+            }
+        }
+    }
+
+    if tops.len() == 1 {
+        Ok(tops.into_iter().next().unwrap())
+    } else if tops.is_empty() {
+        Err("ZIP appears empty".into())
+    } else {
+        Err(format!("ZIP has multiple top-level entries: {:?}", tops))
+    }
+}
+
+/// Move directory with fallback to copy if rename fails (e.g., cross-device).
+fn move_dir(src: &Path, dst: &Path) -> Result<(), String> {
+    if let Err(e) = fs::rename(src, dst) {
+        // Fallback: recursive copy then remove src
+        copy_dir_recursive(src, dst).map_err(|e2| format!("rename failed ({e}); copy failed: {e2}"))?;
+        fs::remove_dir_all(src).map_err(|e| format!("Failed to remove source after copy: {e}"))?;
+    }
+    Ok(())
+}
+
+fn copy_dir_recursive(src: &Path, dst: &Path) -> io::Result<()> {
+    fs::create_dir_all(dst)?;
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let ty = entry.file_type()?;
+        let from = entry.path();
+        let to = dst.join(entry.file_name());
+        if ty.is_dir() {
+            copy_dir_recursive(&from, &to)?;
+        } else if ty.is_file() {
+            fs::copy(&from, &to)?;
+        } else {
+            // symlinks or others: skip or handle as needed. Here we skip silently.
+        }
+    }
     Ok(())
 }
 

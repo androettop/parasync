@@ -30,9 +30,10 @@ import {
 } from "../../types/songs";
 import { SongRepository } from "../../utils/api";
 import { CARD_SIZE, PAGE_SIZE } from "../../utils/songs";
-import { getSongFolderPrefix, unzipSong } from "../../utils/fs";
+import { getSongFolderPrefix } from "../../utils/fs";
 import useSongsPath from "../../hooks/useSongsPath";
 import useLocalSongs from "../../hooks/useLocalSongs";
+import { DownloadManager } from "../../utils/downloads";
 
 const SongsPage = () => {
   const [songsPath] = useSongsPath();
@@ -54,6 +55,7 @@ const SongsPage = () => {
   const [sortBy, setSortBy] = useState<keyof Song>("uploadedAt");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [isLoading, setIsLoading] = useState(false);
+  const downloadManagerRef = useRef(DownloadManager.getInstance());
 
   // Initialize repository
   useEffect(() => {
@@ -161,13 +163,15 @@ const SongsPage = () => {
   };
 
   const handleDownload = async (song: Song) => {
-    if (!songsPath || !repoRef.current) return;
+    if (!song.downloadUrl || !songsPath || !repoRef.current) return;
     setSongsDownloadStates((prev) => ({ ...prev, [song.id]: "downloading" }));
     try {
-      const zip = await repoRef.current.downloadZip(song);
-      if (zip) {
-        await unzipSong(songsPath, song.id, repoRef.current.config.name, zip);
-      }
+      const prefix = getSongFolderPrefix(song.id, repoRef.current.config.name);
+      await downloadManagerRef.current.startAndWait(
+        prefix,
+        song.downloadUrl,
+        songsPath,
+      );
     } finally {
       setSongsDownloadStates((prev) => ({ ...prev, [song.id]: "downloaded" }));
     }

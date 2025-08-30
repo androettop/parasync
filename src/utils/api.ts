@@ -223,16 +223,4 @@ export class SongRepository {
     }
     return raw;
   }
-
-  public async downloadZip(song: Song) {
-    const downloadUrl = song.downloadUrl;
-    if (downloadUrl) {
-      const response = await fetch(downloadUrl, {
-        redirect: "follow",
-      });
-      return await response.blob();
-    } else {
-      throw new Error(`No download URL found for song ${song.title}`);
-    }
-  }
 }
