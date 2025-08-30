@@ -31,13 +31,17 @@ import useSongsPath from "../../hooks/useSongsPath";
 import { notFoundRoute, routes } from "../../utils/routes";
 
 const drawerWidth = 280;
+const defaultDelay = -1700;
 
 const Layout = () => {
   const theme = useTheme();
 
   const navigate = useNavigate();
   const [songsPath] = useSongsPath();
-  const [delay, setDelay] = useLocalStorage<number>("audio-delay", -30);
+  const [delay, setDelay] = useLocalStorage<number>(
+    "audio-delay",
+    defaultDelay,
+  );
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -54,7 +58,7 @@ const Layout = () => {
   };
 
   const handleDelayReset = () => {
-    setDelay(-30);
+    setDelay(defaultDelay);
   };
 
   const handleDrawerClose = () => {
@@ -197,12 +201,12 @@ const Layout = () => {
                       }}
                     />
                   </FormControl>
-                  <Tooltip title="Reset to default (-30ms)">
+                  <Tooltip title={`Reset to default (${defaultDelay}ms)`}>
                     <IconButton
                       color="inherit"
                       size="small"
                       onClick={handleDelayReset}
-                      sx={{ opacity: delay === -30 ? 0.3 : 1 }}
+                      sx={{ opacity: delay === defaultDelay ? 0.3 : 1 }}
                     >
                       <RestoreIcon fontSize="small" />
                     </IconButton>
