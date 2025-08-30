@@ -29,6 +29,10 @@ import { Outlet, To, useNavigate } from "react-router";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
 import useSongsPath from "../../hooks/useSongsPath";
 import { notFoundRoute, routes } from "../../utils/routes";
+import { platform } from "@tauri-apps/plugin-os";
+
+const topSpacing = platform() === "android" ? "24px" : 0;
+const bottomSpacing = platform() === "android" ? "48px" : 0;
 
 const drawerWidth = 280;
 const defaultDelay = -1700;
@@ -99,6 +103,7 @@ const Layout = () => {
           elevation={0}
           position="fixed"
           sx={{
+            paddingTop: topSpacing,
             width: showDrawer
               ? { md: `calc(100% - ${drawerWidth}px)` }
               : "100%",
@@ -242,7 +247,7 @@ const Layout = () => {
               },
             }}
           >
-            <Toolbar>
+            <Toolbar sx={{ marginTop: topSpacing }}>
               <Box
                 sx={{ display: "flex", alignItems: "center", width: "100%" }}
               >
@@ -300,10 +305,14 @@ const Layout = () => {
           bgcolor: "background.default",
         }}
       >
-        {showAppbar && <Toolbar />}
+        {showAppbar && <Toolbar sx={{ marginTop: topSpacing }} />}
         <Container
           maxWidth="xl"
-          sx={{ py: 2, minHeight: "calc(100vh - 64px)" }}
+          sx={{
+            py: 2,
+            minHeight: "calc(100vh - 64px)",
+            paddingBottom: bottomSpacing,
+          }}
         >
           <Outlet />
         </Container>
