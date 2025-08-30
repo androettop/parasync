@@ -167,11 +167,7 @@ const SongsPage = () => {
     setSongsDownloadStates((prev) => ({ ...prev, [song.id]: "downloading" }));
     try {
       const prefix = getSongFolderPrefix(song.id, repoRef.current.config.name);
-      await downloadManagerRef.current.startAndWait(
-        prefix,
-        song.downloadUrl,
-        songsPath,
-      );
+      await downloadManagerRef.current.startAndWait(prefix, song, songsPath);
     } finally {
       setSongsDownloadStates((prev) => ({ ...prev, [song.id]: "downloaded" }));
     }

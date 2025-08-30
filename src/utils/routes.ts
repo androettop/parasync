@@ -1,13 +1,15 @@
 import {
   MusicNote as MusicNoteIcon,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Download as DownloadIcon,
+  CloudDownload as CloudDownloadIcon,
 } from "@mui/icons-material";
-import DownloadIcon from "@mui/icons-material/Download";
 import MySongsPage from "../pages/MySongsPage/MySongsPage";
 import NotFoundPage from "../pages/NotFoundPage/NotFoundPage";
 import PlayerPage from "../pages/PlayerPage/PlayerPage";
 import SettingsPage from "../pages/SettingsPage/SettingsPage";
 import SongsPage from "../pages/SongsPage/SongsPage";
+import DownloadsPage from "../pages/DownloadsPage/DownloadsPage";
 import { Route } from "../types/routes";
 
 export const notFoundRoute: Route = {
@@ -33,6 +35,13 @@ export const routes: Route[] = [
     PageComponent: SongsPage,
     Icon: MusicNoteIcon,
     requiresSongDir: true,
+  },
+  {
+    label: "Downloads",
+    name: "downloads",
+    path: "/downloads",
+    PageComponent: DownloadsPage,
+    Icon: CloudDownloadIcon,
   },
   {
     label: "Settings",

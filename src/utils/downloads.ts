@@ -1,3 +1,18 @@
+import { Song } from "../types/songs";
+
+// Utility function to format bytes
+export const formatBytes = (bytes: number, decimals = 2): string => {
+  if (bytes === 0) return "0 Bytes";
+
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ["Bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
+
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
+};
+
 // Type definition matching what the backend returns
 type DownloadStatus = {
   key: string; // == folderPrefix
@@ -9,11 +24,22 @@ type DownloadStatus = {
 
 type StatusMap = Record<string, DownloadStatus>;
 
+// Extended type with song information for UI
+export type DownloadInfo = {
+  status: DownloadStatus;
+  song: Song;
+  startedAt: Date;
+};
+
 export class DownloadManager {
   private static _instance: DownloadManager | null = null;
   private pollMs: number;
   private timer: any = null;
   private listeners = new Set<(statuses: StatusMap) => void>();
+  private downloadInfoListeners = new Set<
+    (downloads: DownloadInfo[]) => void
+  >();
+  private activeSongs = new Map<string, Song>(); // key -> Song mapping
 
   private constructor(pollIntervalMs = 600) {
     this.pollMs = pollIntervalMs;
@@ -24,20 +50,25 @@ export class DownloadManager {
     return this._instance;
   }
 
-  async start(key: string, downloadUrl: string, destRoot: string) {
+  async start(key: string, song: Song, destRoot: string) {
+    // Store song information for this download
+    this.activeSongs.set(key, song);
+
     // if it already exists in backend, it will return an error; we handle it above
     await (window as any).__TAURI_INTERNALS__.invoke("start_song_download", {
       key,
-      downloadUrl,
+      downloadUrl: song.downloadUrl,
       destRoot,
     });
   }
 
-  async startAndWait(key: string, downloadUrl: string, destRoot: string) {
-    await this.start(key, downloadUrl, destRoot);
+  async startAndWait(key: string, song: Song, destRoot: string) {
+    await this.start(key, song, destRoot);
     return new Promise<void>((resolve) => {
       const off = this.onStatus((statuses) => {
         if (!(key in statuses)) {
+          // Clean up when download completes
+          this.activeSongs.delete(key);
           off();
           resolve();
         }
@@ -53,7 +84,36 @@ export class DownloadManager {
 
   offStatus(cb: (statuses: StatusMap) => void) {
     this.listeners.delete(cb);
-    if (this.listeners.size === 0) this.stopPolling();
+    if (this.listeners.size === 0 && this.downloadInfoListeners.size === 0)
+      this.stopPolling();
+  }
+
+  onDownloads(cb: (downloads: DownloadInfo[]) => void) {
+    this.downloadInfoListeners.add(cb);
+    if (!this.timer) this.startPolling();
+    return () => this.offDownloads(cb);
+  }
+
+  offDownloads(cb: (downloads: DownloadInfo[]) => void) {
+    this.downloadInfoListeners.delete(cb);
+    if (this.listeners.size === 0 && this.downloadInfoListeners.size === 0)
+      this.stopPolling();
+  }
+
+  getActiveDownloads(): DownloadInfo[] {
+    // This method returns current active downloads
+    // Will be populated by the polling mechanism
+    return Array.from(this.activeSongs.entries()).map(([key, song]) => ({
+      status: {
+        key,
+        bytes_downloaded: 0,
+        total_bytes: null,
+        progress: 0,
+        extracting: false,
+      },
+      song,
+      startedAt: new Date(),
+    }));
   }
 
   private startPolling() {
@@ -64,7 +124,32 @@ export class DownloadManager {
         ).__TAURI_INTERNALS__.invoke("downloads_status");
         const map: StatusMap = {};
         for (const st of list) map[st.key] = st;
+
+        // Notify status listeners
         for (const cb of this.listeners) cb(map);
+
+        // Create download info for UI listeners
+        const downloadInfos: DownloadInfo[] = [];
+        for (const status of list) {
+          const song = this.activeSongs.get(status.key);
+          if (song) {
+            downloadInfos.push({
+              status,
+              song,
+              startedAt: new Date(), // We could store this separately if needed
+            });
+          }
+        }
+
+        // Clean up completed downloads
+        for (const key of this.activeSongs.keys()) {
+          if (!map[key]) {
+            this.activeSongs.delete(key);
+          }
+        }
+
+        // Notify download info listeners
+        for (const cb of this.downloadInfoListeners) cb(downloadInfos);
       } catch {
         // ignore transient errors
       }
