@@ -330,5 +330,7 @@ fn unzip_zip_to(zip_path: &Path, dest_dir: &Path) -> Result<(), String> {
     }
 
     Ok(())
+}
+
 // Needed to use `resp.bytes_stream()`
 use futures_util::StreamExt;
