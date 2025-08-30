@@ -1,8 +1,8 @@
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use serde::Serialize;
-use std::{collections::HashMap, fs, io, path::{Path, PathBuf}, sync::Arc};
-use tauri::async_runtime::{self as rt, spawn, spawn_blocking};
+use std::{collections::HashMap, fs, io, path::Path, sync::Arc};
+use tauri::async_runtime::{spawn, spawn_blocking};
 use tokio::{io::AsyncWriteExt, sync::Semaphore};
 
 /// Singleton público del servicio
@@ -97,7 +97,7 @@ impl ManagerInner {
         }
     }
 
-    fn start(&self, key: String, download_url: String, dest_root: String) -> Result<(), String> {
+    fn start(self: &Arc<Self>, key: String, download_url: String, dest_root: String) -> Result<(), String> {
         // Validaciones previas
         if key.trim().is_empty() {
             return Err("key vacía".into());
@@ -126,7 +126,7 @@ impl ManagerInner {
             tasks.insert(key.clone(), TaskHandle { progress: progress.clone() });
 
             // 3) Lanzar tarea asíncrona
-            let inner = Arc::clone(&self);
+            let inner = Arc::clone(self);
             spawn(async move {
                 let _ = inner.run_task(key, download_url, dest_root, progress).await;
             });
