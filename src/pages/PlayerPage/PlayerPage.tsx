@@ -1,4 +1,4 @@
-import { Box } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import GameLoader from "../../components/GameLoader/GameLoader";
@@ -13,6 +13,7 @@ const PlayerPage = () => {
   const [songsPath] = useSongsPath();
   const [song, setSong] = useState<ParadiddleSong | null>(null);
   const [songDirPath, setSongDirPath] = useState<string | null>(null);
+  const [error, setError] = useState<string>("");
 
   useEffect(() => {
     if (!file) {
@@ -22,8 +23,14 @@ const PlayerPage = () => {
     const fullFile = `${songsPath}/${file}`;
     const fileDirPath = fullFile.split("/").slice(0, -1).join("/");
     setSongDirPath(fileDirPath);
-
-    getParadiddleSong(fullFile).then(setSong);
+    getParadiddleSong(fullFile)
+      .then(setSong)
+      .catch((error) => {
+        console.error(`Error loading paradiddle song from ${fullFile}:`, error);
+        setError(
+          `There was an error loading the song, the song file may be corrupted or unreadable.`,
+        );
+      });
   }, [file, navigate, songsPath]);
 
   return (
@@ -37,6 +44,7 @@ const PlayerPage = () => {
           }}
         />
       )}
+      {error && <Typography color="error">{error}</Typography>}
     </Box>
   );
 };
