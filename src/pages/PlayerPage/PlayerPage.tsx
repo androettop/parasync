@@ -16,19 +16,25 @@ const PlayerPage = () => {
   const [error, setError] = useState<string>("");
 
   useEffect(() => {
+    if (!songsPath) {
+      return;
+    }
+
     if (!file) {
       navigate(-1);
       return;
     }
     const fullFile = `${songsPath}/${file}`;
     const fileDirPath = fullFile.split("/").slice(0, -1).join("/");
+
     setSongDirPath(fileDirPath);
     getParadiddleSong(fullFile)
       .then(setSong)
       .catch((error) => {
         console.error(`Error loading paradiddle song from ${fullFile}:`, error);
         setError(
-          `There was an error loading the song, the song file may be corrupted or unreadable.`,
+          `There was an error loading the song, the song file may be corrupted or unreadable.` +
+            error,
         );
       });
   }, [file, navigate, songsPath]);
