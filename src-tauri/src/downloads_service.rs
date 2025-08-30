@@ -246,7 +246,7 @@ impl ManagerInner {
             })?;
 
         // Final directory name = "key-original"
-        let final_name = format!("{}-{}", key, original_root_dir);
+        let final_name = format!("{}{}", key, original_root_dir);
         let final_dir = Path::new(&dest_root).join(&final_name);
 
         // Re-check "already downloaded" condition with the exact final path
@@ -311,7 +311,7 @@ impl ManagerInner {
 
 /// Checks if there is any directory inside `dest_root` whose name starts with "{key}-".
 fn has_existing_with_key_prefix(dest_root: &Path, key: &str) -> io::Result<bool> {
-    let prefix = format!("{key}-");
+    let prefix = key.to_string();
     let rd = match fs::read_dir(dest_root) {
         Ok(rd) => rd,
         Err(e) => {
