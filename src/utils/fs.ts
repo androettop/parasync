@@ -49,21 +49,28 @@ export const loadSong = async (
 
       // if the song data is not loaded and it is a rlrr file readit
       if (!song && entry.name.endsWith(".rlrr")) {
-        baseFileName = entry.name.substring(0, lastUnderscoreIndex);
-        const paradiddleSong: ParadiddleSong = await getParadiddleSong(
-          `${songPath}/${entry.name}`,
-        );
-        song = {
-          title: paradiddleSong.recordingMetadata.title,
-          artist: paradiddleSong.recordingMetadata.artist,
-          id: uuid(),
-          difficulties: [],
-          uploadedAt: new Date().toISOString(),
-          uploadedBy: paradiddleSong.recordingMetadata.creator,
-          coverUrl: await getImageUrl(
-            `${songPath}/${paradiddleSong.recordingMetadata.coverImagePath}`,
-          ),
-        };
+        try {
+          baseFileName = entry.name.substring(0, lastUnderscoreIndex);
+          const paradiddleSong: ParadiddleSong = await getParadiddleSong(
+            `${songPath}/${entry.name}`,
+          );
+          song = {
+            title: paradiddleSong.recordingMetadata.title,
+            artist: paradiddleSong.recordingMetadata.artist,
+            id: uuid(),
+            difficulties: [],
+            uploadedAt: new Date().toISOString(),
+            uploadedBy: paradiddleSong.recordingMetadata.creator,
+            coverUrl: await getImageUrl(
+              `${songPath}/${paradiddleSong.recordingMetadata.coverImagePath}`,
+            ),
+          };
+        } catch (error) {
+          console.error(
+            `Error loading paradiddle song from ${entry.name}:`,
+            error,
+          );
+        }
       }
       if (entry.name.endsWith(".rlrr")) {
         const difficulty =
