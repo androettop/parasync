@@ -33,8 +33,7 @@ const PlayerPage = () => {
       .catch((error) => {
         console.error(`Error loading paradiddle song from ${fullFile}:`, error);
         setError(
-          `There was an error loading the song, the song file may be corrupted or unreadable.` +
-            error,
+          `There was an error loading the song, the song file may be corrupted or unreadable.`,
         );
       });
   }, [file, navigate, songsPath]);
