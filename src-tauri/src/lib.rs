@@ -1,5 +1,7 @@
 mod audio_service;
 mod audio_commands;
+mod downloads_service;
+mod downloads_commands;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -14,6 +16,8 @@ pub fn run() {
             audio_commands::audio_status,
             audio_commands::set_tracks_gain_by_path,
             audio_commands::mute_tracks_by_path,
+            downloads_commands::start_song_download,
+            downloads_commands::downloads_status,
         ])
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_dialog::init())
