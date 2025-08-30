@@ -2,22 +2,22 @@ import { ImageSource } from "excalibur";
 
 export async function applyBlur(
   originalImage: ImageSource,
-  blurPct: number = 0.01
+  blurPct: number = 0.01,
 ): Promise<ImageSource> {
-  // Crear un canvas para aplicar el efecto de desenfoque
+  // Create a canvas to apply the blur effect
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
 
   if (ctx) {
-    // Configurar el tamaño del canvas según la imagen original
+    // Configure canvas size according to the original image
     const img = await originalImage.load();
     canvas.width = img.naturalWidth;
     canvas.height = img.naturalHeight;
 
-    // Dibujar la imagen original en el canvas
+    // Draw the original image on the canvas
     ctx.drawImage(img, 0, 0);
 
-    // Aplicar desenfoque usando CSS filter
+    // Apply blur using CSS filter
     ctx.filter = `blur(${Math.floor(blurPct * img.naturalWidth)}px)`;
     ctx.drawImage(img, 0, 0);
 
