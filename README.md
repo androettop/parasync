@@ -4,8 +4,8 @@
 
 It’s fully compatible with songs from the popular VR drumming app [Paradiddle](https://paradiddleapp.com).
 
-<img width="1282" height="1071" alt="image" src="https://github.com/user-attachments/assets/094cd206-fa29-45c9-b4ff-cb86020860e0" />
-<img width="1275" height="1066" alt="image" src="https://github.com/user-attachments/assets/747fffba-dfc8-4a67-be05-b4f5f8527a06" />
+<img width="1336" height="1115" alt="Captura de pantalla 2025-08-31 a las 3 50 02" src="https://github.com/user-attachments/assets/a349cd02-548a-45e6-9751-6e2af3dad0e5" />
+<img width="1336" height="1115" alt="Captura de pantalla 2025-08-31 a las 3 49 22" src="https://github.com/user-attachments/assets/f477b0b4-1852-4900-aa10-d22630eb25fa" />
 
 ## 🎮 Download
 
