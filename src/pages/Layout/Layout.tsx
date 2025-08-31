@@ -147,7 +147,6 @@ const Layout = () => {
                   display: "flex",
                   alignItems: "center",
                   gap: 2,
-                  minWidth: 200,
                 }}
               >
                 <Stack
@@ -155,7 +154,7 @@ const Layout = () => {
                   spacing={1}
                   sx={{ alignItems: "center", flex: 1 }}
                 >
-                  <Typography variant="body2">Latency:</Typography>
+                  <Typography variant="body2">delay:</Typography>
                   <FormControl size="small" variant="outlined">
                     <TextField
                       type="number"
