@@ -2946,7 +2946,7 @@ dependencies = [
 
 [[package]]
 name = "parasync"
-version = "0.4.2"
+version = "0.4.3"
 dependencies = [
  "cpal",
  "crossbeam-channel",
