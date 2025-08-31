@@ -9,7 +9,6 @@ import { ParadiddleSong } from "../types/songs";
 import { SongAudioManager } from "../utils/audio";
 import { GAME_CONFIG } from "./config";
 import { releaseFileUrl } from "./helpers/filesLoader";
-import { applyBlur } from "./helpers/imageEffects";
 import { ImageFile } from "./helpers/loaders";
 import { createLoader, Resources as NotesResources } from "./resources";
 import MainScene from "./scenes/MainScene";

@@ -1,4 +1,4 @@
-import { DefaultLoader, ImageSource, ImageWrapping, Loadable } from "excalibur";
+import { ImageSource, ImageWrapping, Loadable } from "excalibur";
 
 import noteCircleCyan from "../assets/NoteCircleCyan.png";
 import noteCircleOrange from "../assets/NoteCircleOrange.png";

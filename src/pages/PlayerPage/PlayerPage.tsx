@@ -2,11 +2,10 @@ import { Box, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import GameLoader from "../../components/GameLoader/GameLoader";
-import { ParadiddleSong } from "../../types/songs";
-import useSongsPath from "../../hooks/useSongsPath";
-import { getParadiddleSong } from "../../utils/fs";
-import { ImageFile } from "../../game/helpers/loaders";
 import { loadFile } from "../../game/helpers/filesLoader";
+import useSongsPath from "../../hooks/useSongsPath";
+import { ParadiddleSong } from "../../types/songs";
+import { getParadiddleSong } from "../../utils/fs";
 
 const PlayerPage = () => {
   const navigate = useNavigate();
