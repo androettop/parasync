@@ -32,12 +32,12 @@ class Game extends Engine {
     super({
       canvasElement: canvas,
       resolution: { height: GAME_CONFIG.height, width: GAME_CONFIG.width },
-      backgroundColor: Color.Black,
+      backgroundColor: Color.fromHex("#00000000"),
+      enableCanvasTransparency: true,
       suppressConsoleBootMessage: true,
       scrollPreventionMode: ScrollPreventionMode.None,
       displayMode: DisplayMode.FitContainer,
     });
-
     this.song = song;
     this.songDirPath = songDirPath;
     this.exitHandler = onExit;
@@ -109,12 +109,12 @@ class Game extends Engine {
       `${this.songDirPath}/${this.song.recordingMetadata.coverImagePath}`,
     );
 
-    this.coverBg = await applyBlur(this.cover);
+    //this.coverBg = await applyBlur(this.cover);
     this.add("main", new MainScene());
     const loader = createLoader(NotesResources);
     loader.addResource(this.songAudioManager);
     loader.addResource(this.cover);
-    loader.addResource(this.coverBg);
+    //loader.addResource(this.coverBg);
     this.start(loader);
   }
 

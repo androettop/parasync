@@ -305,17 +305,23 @@ const Layout = () => {
           bgcolor: "background.default",
         }}
       >
-        {showAppbar && <Toolbar sx={{ marginTop: topSpacing }} />}
-        <Container
-          maxWidth="xl"
-          sx={{
-            py: 2,
-            minHeight: "calc(100vh - 64px)",
-            paddingBottom: bottomSpacing,
-          }}
-        >
+        {currentRoute.path === "/play" ? (
           <Outlet />
-        </Container>
+        ) : (
+          <>
+            {showAppbar && <Toolbar sx={{ marginTop: topSpacing }} />}
+            <Container
+              maxWidth="xl"
+              sx={{
+                py: 2,
+                minHeight: "calc(100vh - 64px)",
+                paddingBottom: bottomSpacing,
+              }}
+            >
+              <Outlet />
+            </Container>
+          </>
+        )}
       </Box>
 
       <Menu

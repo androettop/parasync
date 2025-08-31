@@ -2,5 +2,11 @@
   display: flex;
   justify-content: center;
   align-items: start;
-  height: calc(100dvh - 96px);
+  height: calc(100dvh - 60px);
+  width: 100%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, calc(-50% + 32px));
+  padding: 20px;
 }

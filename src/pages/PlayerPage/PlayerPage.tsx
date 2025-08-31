@@ -5,6 +5,8 @@ import GameLoader from "../../components/GameLoader/GameLoader";
 import { ParadiddleSong } from "../../types/songs";
 import useSongsPath from "../../hooks/useSongsPath";
 import { getParadiddleSong } from "../../utils/fs";
+import { ImageFile } from "../../game/helpers/loaders";
+import { loadFile } from "../../game/helpers/filesLoader";
 
 const PlayerPage = () => {
   const navigate = useNavigate();
@@ -14,6 +16,7 @@ const PlayerPage = () => {
   const [song, setSong] = useState<ParadiddleSong | null>(null);
   const [songDirPath, setSongDirPath] = useState<string | null>(null);
   const [error, setError] = useState<string>("");
+  const [coverImage, setCoverImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!songsPath) {
@@ -29,7 +32,16 @@ const PlayerPage = () => {
 
     setSongDirPath(fileDirPath);
     getParadiddleSong(fullFile)
-      .then(setSong)
+      .then((song) => {
+        setSong(song);
+        loadFile(`${fileDirPath}/${song.recordingMetadata.coverImagePath}`)
+          .then((coverImage) => {
+            setCoverImage(coverImage);
+          })
+          .catch((error) => {
+            console.error(`Error loading cover image:`, error);
+          });
+      })
       .catch((error) => {
         console.error(`Error loading paradiddle song from ${fullFile}:`, error);
         setError(
@@ -39,15 +51,40 @@ const PlayerPage = () => {
   }, [file, navigate, songsPath]);
 
   return (
-    <Box>
+    <Box
+      sx={{
+        height: "100%",
+        paddingTop: 2,
+        position: "relative",
+      }}
+    >
       {song && songDirPath && (
-        <GameLoader
-          song={song}
-          songDirPath={songDirPath}
-          onExit={() => {
-            navigate(-1);
-          }}
-        />
+        <>
+          {coverImage && (
+            <img
+              src={coverImage}
+              style={{
+                objectFit: "cover",
+                width: "100%",
+                height: "100%",
+                position: "absolute",
+                top: 0,
+                left: 0,
+                filter: "blur(8px)",
+                opacity: 0.5,
+              }}
+              alt="cover"
+            />
+          )}
+
+          <GameLoader
+            song={song}
+            songDirPath={songDirPath}
+            onExit={() => {
+              navigate(-1);
+            }}
+          />
+        </>
       )}
       {error && <Typography color="error">{error}</Typography>}
     </Box>
