@@ -40,12 +40,13 @@ import StopOffBtn from "../assets/StopOffBtn.png";
 
 import ProgressBarEmpty from "../assets/ProgressBarEmpty.png";
 import ProgressBarFull from "../assets/ProgressBarFull.png";
+import TransparentLoader from "./helpers/transparentLoader";
 
 export const createLoader = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ...resourceObjects: Record<string, Loadable<any>>[]
 ) => {
-  const loader = new DefaultLoader();
+  const loader = new TransparentLoader();
   for (const resourceObject of resourceObjects) {
     for (const key in resourceObject) {
       loader.addResource(resourceObject[key]);
@@ -94,7 +95,9 @@ const StopBtnImg = new ImageSource(StopBtn);
 const StopOffBtnImg = new ImageSource(StopOffBtn);
 
 const ProgressBarEmptyImg = new ImageSource(ProgressBarEmpty);
-const ProgressBarFullImg = new ImageSource(ProgressBarFull, {wrapping: ImageWrapping.Repeat});
+const ProgressBarFullImg = new ImageSource(ProgressBarFull, {
+  wrapping: ImageWrapping.Repeat,
+});
 
 export const Resources = {
   NoteCircleCyan: noteCircleCyanImg,
