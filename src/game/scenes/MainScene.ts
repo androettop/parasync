@@ -46,6 +46,8 @@ class MainScene extends Scene {
     // process notes to make it easier to use
     const { notes, instruments } = processNotesAndInstruments(
       engine.song.events,
+      engine.song.bpmEvents,
+      engine.song.recordingMetadata.length,
     );
 
     // Add the Highway

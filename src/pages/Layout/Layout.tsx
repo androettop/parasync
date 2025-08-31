@@ -29,10 +29,7 @@ import { Outlet, To, useNavigate } from "react-router";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
 import useSongsPath from "../../hooks/useSongsPath";
 import { notFoundRoute, routes } from "../../utils/routes";
-import { platform } from "@tauri-apps/plugin-os";
-
-const topSpacing = platform() === "android" ? "24px" : 0;
-const bottomSpacing = platform() === "android" ? "48px" : 0;
+import { bottomSpacing, topSpacing } from "../../utils/mobile";
 
 const drawerWidth = 280;
 const defaultDelay = -1700;

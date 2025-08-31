@@ -31,6 +31,9 @@ export type EventData = {
 export type BPMEventData = {
   bpm: number;
   time: number;
+  timeSignature?: [number, number];
+  swing?: number;
+  delay?: number;
 };
 
 // Webapp types

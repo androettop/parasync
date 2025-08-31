@@ -2,6 +2,8 @@ import { useEffect, useRef } from "react";
 import styles from "./GameLoader.module.css";
 import Game from "../../game/engine";
 import { ParadiddleSong } from "../../types/songs";
+import { Box } from "@mui/material";
+import { bottomSpacing, topSpacing } from "../../utils/mobile";
 
 interface GameLoaderProps {
   songDirPath: string;
@@ -30,7 +32,17 @@ const GameLoader = ({ songDirPath, song, onExit }: GameLoaderProps) => {
     };
   }, [songDirPath, song]);
 
-  return <div className={styles["game-container"]} ref={containerRef}></div>;
+  return (
+    <Box
+      sx={{
+        paddingX: 1,
+        paddingTop: `calc(20px + ${topSpacing})`,
+        paddingBottom: `calc(20px + ${bottomSpacing})`,
+      }}
+      className={styles["game-container"]}
+      ref={containerRef}
+    ></Box>
+  );
 };
 
 export default GameLoader;

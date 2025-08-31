@@ -1,5 +1,5 @@
 import { Actor, ImageSource, vec } from "excalibur";
-import { EventData } from "../../types/songs";
+import { BPMEventData, EventData } from "../../types/songs";
 import BaseNote from "../actors/Notes/BaseNote";
 import { GAME_CONFIG } from "../config";
 import { Resources } from "../resources";
@@ -16,45 +16,73 @@ export const getBatchNumber = (time: number | string): number => {
   return Math.floor(Number(time) / GAME_CONFIG.notesBatchSize);
 };
 
-export const processNotesAndInstruments = (events: EventData[]) => {
+export const processNotesAndInstruments = (
+  events: EventData[],
+  bpmEvents: BPMEventData[],
+  endTime: number,
+) => {
   const notes: Record<number, ProcessedNote[]> = {};
 
-  // load instruments used in the song
+  // Instruments used (bpm does not have its own lane)
   const instruments = GAME_CONFIG.instrumentsOrder.filter((instrument) =>
     events.some((event) => event.name.startsWith(instrument)),
   );
 
-  // preprocess the song events to add it in notes with the key as the batch number.
-  events.forEach((event) => {
-    const batchNumber = getBatchNumber(event.time);
-    if (!notes[batchNumber]) {
-      notes[batchNumber] = [];
-    }
+  const centerX = GAME_CONFIG.highwayWidth / 2;
 
+  const computePosX = (instrumentClass: string) => {
+    if (["BP_Kick_C", "bpm"].includes(instrumentClass)) return centerX;
+    const instrumentIndex = instruments.indexOf(instrumentClass);
+    if (instrumentIndex < 0 || instruments.length === 0) return centerX;
+    return (
+      (GAME_CONFIG.highwayWidth / instruments.length) * instrumentIndex +
+      GAME_CONFIG.highwayWidth / (instruments.length * 2)
+    );
+  };
+
+  const pushNote = (timeNum: number, instrumentClass: string) => {
+    const batchNumber = getBatchNumber(timeNum);
+    if (!notes[batchNumber]) notes[batchNumber] = [];
+    notes[batchNumber].push({
+      time: timeNum,
+      class: instrumentClass,
+      posX: computePosX(instrumentClass),
+    });
+  };
+
+  // 1) Instrument notes: convert time (string) -> number
+  for (const event of events) {
+    const t = Number(event.time);
+    if (!Number.isFinite(t)) continue; // safety against invalid strings
     const instrumentClass = event.name.substring(
       0,
       event.name.lastIndexOf("_"),
     );
+    pushNote(t, instrumentClass);
+  }
 
-    let posX = 0;
+  // 2) Expand bpmEvents to "bpm" notes (centered, no lane)
+  if (bpmEvents?.length) {
+    const sorted = [...bpmEvents].sort((a, b) => a.time - b.time);
+    const songEnd = endTime;
+    const EPS = 1e-6;
 
-    if (instrumentClass === "BP_Kick_C") {
-      posX = GAME_CONFIG.highwayWidth / 2;
-    } else {
-      const instrumentIndex = instruments.indexOf(instrumentClass);
-      posX =
-        (GAME_CONFIG.highwayWidth / instruments.length) * instrumentIndex +
-        GAME_CONFIG.highwayWidth / (instruments.length * 2);
+    for (let i = 0; i < sorted.length; i++) {
+      const cur = sorted[i];
+      const next = sorted[i + 1];
+
+      const sectionStart = Math.max(0, cur.time);
+      const sectionEnd = Math.min(songEnd, next ? next.time : songEnd);
+      if (sectionEnd <= sectionStart) continue;
+      if (cur.bpm <= 0) continue;
+
+      const period = 60 / cur.bpm;
+
+      for (let t = sectionStart; t < sectionEnd - EPS; t += period) {
+        pushNote(t, "bpm");
+      }
     }
-
-    const newNote: ProcessedNote = {
-      time: Number(event.time),
-      class: instrumentClass,
-      posX,
-    };
-
-    notes[batchNumber].push(newNote);
-  });
+  }
 
   return { notes, instruments };
 };
@@ -89,6 +117,9 @@ export const createNoteActor = (note: ProcessedNote) => {
       break;
     case "BP_Kick_C":
       noteActor = new BaseNote(note, Resources.NoteKick, 8);
+      break;
+    case "bpm":
+      noteActor = new BaseNote(note, Resources.NoteBpm, 4);
       break;
     default:
       noteActor = new BaseNote(note, Resources.NoteRectBase);
