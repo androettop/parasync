@@ -140,7 +140,6 @@ class Game extends Engine {
   }
 
   private releaseResources() {
-    console.log("Releasing resources...");
     releaseFileUrl(this.cover?.data.src);
     releaseFileUrl(this.coverBg?.data.src);
     this.songAudioManager?.dispose();

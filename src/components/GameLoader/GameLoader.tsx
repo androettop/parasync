@@ -15,7 +15,6 @@ const GameLoader = ({ songDirPath, song, onExit }: GameLoaderProps) => {
 
   useEffect(() => {
     if (containerRef.current && !engineRef.current) {
-      console.log("Creating game engine");
       const canvas = document.createElement("canvas");
       containerRef.current.append(canvas);
       engineRef.current = new Game(canvas, songDirPath, song, onExit);

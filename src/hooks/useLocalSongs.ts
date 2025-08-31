@@ -28,7 +28,11 @@ const useLocalSongs = () => {
     };
   }, [handleLoadSongs, songsPath]);
 
-  return songs;
+  const refresh = () => {
+    handleLoadSongs(songsPath);
+  };
+
+  return { songs, refresh };
 };
 
 export default useLocalSongs;

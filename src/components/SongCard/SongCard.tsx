@@ -28,6 +28,10 @@ export interface SongCardProps {
   onDownload?: () => void;
   onPlay?: (difficulty: Difficulty) => void;
   isLoading?: boolean;
+  localSong?: boolean;
+  selectable?: boolean;
+  selected?: boolean;
+  onSelect?: () => void;
 }
 
 const HOVER_DELAY = 500; // milliseconds
@@ -42,6 +46,10 @@ const SongCard = ({
   onDownload,
   onPlay,
   isLoading,
+  localSong = false,
+  selectable = false,
+  selected = false,
+  onSelect,
 }: SongCardProps) => {
   const theme = useTheme();
   const titleRef = useRef<HTMLElement>(null);
@@ -66,6 +74,10 @@ const SongCard = ({
   };
 
   const handleCardClick = (event: React.MouseEvent) => {
+    if (selectable && onSelect) {
+      onSelect();
+      return;
+    }
     if (downloadState === "downloaded") {
       if (onPlay) {
         if (difficulties.length > 1) {
@@ -106,6 +118,10 @@ const SongCard = ({
         sx={{
           aspectRatio: "1 / 1",
           position: "relative",
+          boxShadow:
+            selectable && selected
+              ? `0 0 0 2px ${theme.palette.primary.light}`
+              : undefined,
         }}
       >
         <CardActionArea
@@ -116,6 +132,7 @@ const SongCard = ({
             flexDirection: "column",
             alignItems: "stretch",
             height: "100%",
+            opacity: selectable && !selected ? 0.85 : 1,
           }}
         >
           {!isLoading ? (
@@ -174,20 +191,22 @@ const SongCard = ({
                 )}
               </Grid>
               <Grid size="grow" textAlign="right">
-                <Tooltip
-                  placement="top"
-                  title={
-                    !isLoading && downloadState
-                      ? getDownloadStateLabel(downloadState)
-                      : "Loading song details..."
-                  }
-                >
-                  {!isLoading && downloadState ? (
-                    getDownloadStateIcon(downloadState)
-                  ) : (
-                    <CircularProgress color="inherit" size={20} />
-                  )}
-                </Tooltip>
+                {!localSong && (
+                  <Tooltip
+                    placement="top"
+                    title={
+                      !isLoading && downloadState
+                        ? getDownloadStateLabel(downloadState)
+                        : "Loading song details..."
+                    }
+                  >
+                    {!isLoading && downloadState ? (
+                      getDownloadStateIcon(downloadState)
+                    ) : (
+                      <CircularProgress color="inherit" size={20} />
+                    )}
+                  </Tooltip>
+                )}
               </Grid>
             </Grid>
 

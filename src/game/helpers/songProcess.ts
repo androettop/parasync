@@ -21,7 +21,7 @@ export const processNotesAndInstruments = (events: EventData[]) => {
 
   // load instruments used in the song
   const instruments = GAME_CONFIG.instrumentsOrder.filter((instrument) =>
-    events.some((event) => event.name.startsWith(instrument))
+    events.some((event) => event.name.startsWith(instrument)),
   );
 
   // preprocess the song events to add it in notes with the key as the batch number.
@@ -33,7 +33,7 @@ export const processNotesAndInstruments = (events: EventData[]) => {
 
     const instrumentClass = event.name.substring(
       0,
-      event.name.lastIndexOf("_")
+      event.name.lastIndexOf("_"),
     );
 
     let posX = 0;
@@ -91,7 +91,6 @@ export const createNoteActor = (note: ProcessedNote) => {
       noteActor = new BaseNote(note, Resources.NoteKick, 8);
       break;
     default:
-      console.log("Unknown note class: ", note.class);
       noteActor = new BaseNote(note, Resources.NoteRectBase);
       break;
   }
@@ -108,7 +107,7 @@ export const createRailBorderActors = (instruments: string[]) => {
       GAME_CONFIG.highwayWidth / 2;
     const pos = vec(
       posX,
-      GAME_CONFIG.dividerPosition - GAME_CONFIG.highwayHeight / 2 - 2
+      GAME_CONFIG.dividerPosition - GAME_CONFIG.highwayHeight / 2 - 2,
     );
     railActors.push(new InstrumentRailBorder(pos));
   }
@@ -158,7 +157,6 @@ export const createDividerNoteActors = (instruments: string[]) => {
         break;
       default:
         dividerImage = Resources.DividerNoteRectBase;
-        console.log("Unknown instrument: ", instrument);
         break;
     }
     dividerActors.push(new DividerNote(pos, dividerImage));

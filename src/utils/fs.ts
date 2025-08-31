@@ -1,5 +1,11 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { readDir, readTextFile, readFile, mkdir } from "@tauri-apps/plugin-fs";
+import {
+  readDir,
+  readTextFile,
+  readFile,
+  mkdir,
+  remove,
+} from "@tauri-apps/plugin-fs";
 import { Difficulty, LocalSong, ParadiddleSong, Song } from "../types/songs";
 import { v4 as uuid } from "uuid";
 
@@ -194,4 +200,16 @@ export const getSongFolderPrefix = (
   repoName: string,
 ): string => {
   return `${repoName}-${songId}-`;
+};
+
+export const deleteSong = async (songsPath: string): Promise<void> => {
+  // removes the song folder from the file system
+  try {
+    await remove(songsPath, {
+      recursive: true,
+    });
+  } catch (error) {
+    console.error(`Error deleting song folder ${songsPath}:`, error);
+    throw error;
+  }
 };

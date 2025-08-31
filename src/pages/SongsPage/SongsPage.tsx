@@ -37,9 +37,7 @@ import { DownloadManager } from "../../utils/downloads";
 
 const SongsPage = () => {
   const [songsPath] = useSongsPath();
-  const [songs, setSongs] = useState<{ song: Song; localSong?: LocalSong }[]>(
-    [],
-  );
+  const [onlineSongs, setOnlineSongs] = useState<Song[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +46,7 @@ const SongsPage = () => {
   const [songsDownloadStates, setSongsDownloadStates] = useState<
     Record<string, DownloadState>
   >({});
-  const localSongs = useLocalSongs();
+  const { songs: localSongs, refresh: refreshLocalSongs } = useLocalSongs();
   const navigate = useNavigate();
   // Search states
   const [searchQuery, setSearchQuery] = useState("");
@@ -56,6 +54,25 @@ const SongsPage = () => {
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [isLoading, setIsLoading] = useState(false);
   const downloadManagerRef = useRef(DownloadManager.getInstance());
+
+  // Helper function to combine online songs with local songs
+  const getCombinedSongs = () => {
+    return onlineSongs.map((song) => {
+      const data: { song: Song; localSong?: LocalSong } = {
+        song,
+        localSong: localSongs?.find((localSong) => {
+          if (!repoRef.current) return false;
+          const prefix = getSongFolderPrefix(
+            song.id,
+            repoRef.current.config.name,
+          );
+          const isLocal = localSong.baseFileName.startsWith(prefix);
+          return isLocal;
+        }),
+      };
+      return data;
+    });
+  };
 
   // Initialize repository
   useEffect(() => {
@@ -88,7 +105,6 @@ const SongsPage = () => {
     sortBy,
     sortDirection,
   }: SearchParams) => {
-    console.log(repoRef.current, isLoading);
     // Prevent multiple concurrent searches
     if (!repoRef.current || repoRef.current.isLoading) return;
     if (isLoading) return;
@@ -98,7 +114,7 @@ const SongsPage = () => {
     try {
       setCurrentPage(page);
 
-      const onlineSongs = await repoRef.current.search({
+      const onlineSongsResult = await repoRef.current.search({
         query: query.trim(),
         page,
         pageSize,
@@ -106,34 +122,14 @@ const SongsPage = () => {
         sortDirection,
       });
 
-      // format and add localsongs if available
-
-      const songs = onlineSongs.map((song) => {
-        const data: { song: Song; localSong?: LocalSong } = {
-          song,
-          localSong: localSongs?.find((localSong) => {
-            if (!repoRef.current) return false;
-            const prefix = getSongFolderPrefix(
-              song.id,
-              repoRef.current.config.name,
-            );
-            const isLocal = localSong.baseFileName.startsWith(prefix);
-            console.log(localSong.baseFileName, prefix, isLocal);
-            return isLocal;
-          }),
-        };
-        return data;
-      });
-
       if (page !== 1) {
-        setSongs((prev) => [...prev, ...songs]);
+        setOnlineSongs((prev) => [...prev, ...onlineSongsResult]);
       } else {
-        setSongs(songs);
+        setOnlineSongs(onlineSongsResult);
       }
       // Not perfect, but i'm lazy
-      setHasMore(songs.length === PAGE_SIZE);
+      setHasMore(onlineSongsResult.length === PAGE_SIZE);
     } catch (err) {
-      console.log(err);
       setError(err instanceof Error ? err.message : "Failed to search songs");
     } finally {
       setIsLoading(false);
@@ -170,6 +166,7 @@ const SongsPage = () => {
       await downloadManagerRef.current.startAndWait(prefix, song, songsPath);
     } finally {
       setSongsDownloadStates((prev) => ({ ...prev, [song.id]: "downloaded" }));
+      refreshLocalSongs();
     }
   };
 
@@ -295,11 +292,14 @@ const SongsPage = () => {
                 color={!isLoading && error ? "error" : "text.secondary"}
               >
                 {isLoading && "Loading..."}
-                {!isLoading && !error && songs.length === 1 && "1 song found"}
                 {!isLoading &&
                   !error &&
-                  songs.length > 1 &&
-                  `${songs.length} songs found`}
+                  onlineSongs.length === 1 &&
+                  "1 song found"}
+                {!isLoading &&
+                  !error &&
+                  onlineSongs.length > 1 &&
+                  `${onlineSongs.length} songs found`}
                 {!isLoading && error && `${error}`}
               </Typography>
             </Box>
@@ -317,8 +317,8 @@ const SongsPage = () => {
                     <SongCard isLoading />
                   </Grid>
                 ))
-              ) : songs.length > 0 ? (
-                songs.map((data) => {
+              ) : onlineSongs.length > 0 ? (
+                getCombinedSongs().map((data) => {
                   return (
                     <Grid key={data.song.id} size={CARD_SIZE}>
                       <SongCard

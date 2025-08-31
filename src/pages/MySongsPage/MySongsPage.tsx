@@ -1,17 +1,29 @@
 import FolderOpenIcon from "@mui/icons-material/FolderOpen";
-import { Box, Button, Grid, Link, Paper, Typography } from "@mui/material";
+import {
+  AppBar,
+  Box,
+  Button,
+  Grid,
+  Link,
+  Paper,
+  Toolbar,
+  Typography,
+} from "@mui/material";
+import React from "react";
 import { Link as RRLink, useNavigate } from "react-router";
-import { platform } from "@tauri-apps/plugin-os";
 import SongCard from "../../components/SongCard/SongCard";
 import useLocalSongs from "../../hooks/useLocalSongs";
 import useSongsPath from "../../hooks/useSongsPath";
 import { Difficulty, LocalSong } from "../../types/songs";
-import { selectSongsDirectory } from "../../utils/fs";
+import { deleteSong, selectSongsDirectory } from "../../utils/fs";
 import { CARD_SIZE } from "../../utils/songs";
+import { platform } from "@tauri-apps/plugin-os";
 
 const MySongsPage = () => {
   const [songsPath, setSongsPath] = useSongsPath();
-  const songs = useLocalSongs();
+  const { songs, refresh } = useLocalSongs();
+  const [selectMode, setSelectMode] = React.useState(false);
+  const [selectedSongs, setSelectedSongs] = React.useState<string[]>([]);
 
   const navigate = useNavigate();
 
@@ -29,6 +41,40 @@ const MySongsPage = () => {
   };
 
   const isAndroid = platform() === "android";
+
+  const handleToggleSong = (baseFileName: string) => {
+    setSelectedSongs((prev) =>
+      prev.includes(baseFileName)
+        ? prev.filter((f) => f !== baseFileName)
+        : [...prev, baseFileName],
+    );
+  };
+
+  const handleDeleteSelected = () => {
+    const deletePromises = selectedSongs.map(async (baseFileName) => {
+      const songFolder =
+        songsPath +
+        "/" +
+        baseFileName.substring(0, baseFileName.lastIndexOf("/"));
+      return deleteSong(songFolder);
+    });
+
+    Promise.all(deletePromises).catch((error) => {
+      console.error("Error deleting selected songs:", error);
+    });
+
+    refresh();
+
+    setSelectedSongs([]);
+    setSelectMode(false);
+  };
+
+  const handleCancelSelect = () => {
+    setSelectedSongs([]);
+    setSelectMode(false);
+  };
+
+  const songsCount = songs?.length || 0;
 
   return (
     <Box>
@@ -50,9 +96,8 @@ const MySongsPage = () => {
             >
               My Songs
             </Typography>
-            {!isAndroid && (
-              <Box>
-                {/* Choose songs folder button */}
+            <Box>
+              {!isAndroid && (
                 <Button
                   variant="outlined"
                   color="primary"
@@ -61,19 +106,18 @@ const MySongsPage = () => {
                 >
                   Choose Songs Folder
                 </Button>
+              )}
+              {songsCount > 0 && (
                 <Button
                   variant="outlined"
-                  color="primary"
-                  startIcon={<FolderOpenIcon />}
-                  onClick={() => setSongsPath(null)}
-                  sx={{
-                    marginLeft: 2,
-                  }}
+                  color={"primary"}
+                  sx={{ marginLeft: 2 }}
+                  onClick={() => setSelectMode(true)}
                 >
-                  Clear
+                  Select songs
                 </Button>
-              </Box>
-            )}
+              )}
+            </Box>
           </Box>
 
           <Typography variant="subtitle1" color="text.secondary">
@@ -85,6 +129,31 @@ const MySongsPage = () => {
           </Typography>
         </Grid>
 
+        {/* Barra de acciones de selección */}
+        {selectMode && (
+          <AppBar
+            position="static"
+            color="default"
+            elevation={1}
+            sx={{ mb: 2 }}
+          >
+            <Toolbar>
+              <Typography sx={{ flex: 1 }}>
+                {selectedSongs.length} selected
+              </Typography>
+              <Button
+                variant="text"
+                disabled={selectedSongs.length === 0}
+                onClick={handleDeleteSelected}
+              >
+                Delete selected
+              </Button>
+              <Button onClick={handleCancelSelect} sx={{ ml: 2 }}>
+                Cancel
+              </Button>
+            </Toolbar>
+          </AppBar>
+        )}
         {/* Songs List */}
         <Grid size={12}>
           {!songsPath ? (
@@ -113,15 +182,25 @@ const MySongsPage = () => {
                   <Grid key={localSong.baseFileName} size={CARD_SIZE}>
                     {localSong.song ? (
                       <SongCard
+                        localSong={true}
                         title={localSong.song.title}
                         artist={localSong.song.artist}
                         coverImage={localSong.song.coverUrl || ""}
                         difficulties={localSong.song.difficulties}
                         downloadState={"downloaded"}
-                        onPlay={(difficulty) =>
-                          handlePlay(localSong, difficulty)
+                        onPlay={
+                          selectMode
+                            ? undefined
+                            : (difficulty) => handlePlay(localSong, difficulty)
                         }
                         downloads={localSong.song.downloads || 0}
+                        selectable={selectMode}
+                        selected={selectedSongs.includes(
+                          localSong.baseFileName,
+                        )}
+                        onSelect={() =>
+                          handleToggleSong(localSong.baseFileName)
+                        }
                       />
                     ) : (
                       <SongCard isLoading />
