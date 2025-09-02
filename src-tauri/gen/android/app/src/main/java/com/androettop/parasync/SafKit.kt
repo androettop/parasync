@@ -32,7 +32,7 @@ class SafKit(private val activity: Activity) {
             ?.registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
                 android.util.Log.d("SafKit", "onResult uri=" + (uri?.toString() ?: "null"))
                 if (uri != null) {
-                    lastResultUri = uri.toString() // ⚠️ setear ANTES de persistir
+                    lastResultUri = uri.toString() // ⚠️ set BEFORE persisting
                     try {
                         val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                         activity.contentResolver.takePersistableUriPermission(uri, flags)
@@ -41,7 +41,7 @@ class SafKit(private val activity: Activity) {
                         android.util.Log.d("SafKit", "persist OK")
                     } catch (e: Exception) {
                         android.util.Log.w("SafKit", "persist FAIL: " + e.message)
-                        // IMPORTANTE: NO borres lastResultUri aquí; así el bloqueante puede devolverla.
+                        // IMPORTANT: Do NOT clear lastResultUri here; so the blocking call can return it.
                     }
                 } else {
                     lastResultUri = null
@@ -52,12 +52,12 @@ class SafKit(private val activity: Activity) {
     }
 
     /**
-     * Muestra el selector SAF y BLOQUEA hasta que el usuario elija o cancele.
-     * Devuelve el URI persistido (content://...) o null.
-     * IMPORTANTE: Llamar desde hilo de fondo (los commands de Tauri ya corren en background).
+     * Shows the SAF picker and BLOCKS until the user selects or cancels.
+     * Returns the persisted URI (content://...) or null.
+     * IMPORTANT: Call from a background thread (Tauri commands already run in background).
      */
     fun selectSongsDirBlocking(timeoutSeconds: Long = 120): String? {
-        // prepara sincronización
+    // prepare synchronization
         latch = CountDownLatch(1)
         lastResultUri = null
 
@@ -65,7 +65,7 @@ class SafKit(private val activity: Activity) {
             openTreeLauncher?.launch(null)
         }
 
-        // espera resultado (con timeout defensivo)
+    // wait for result (with defensive timeout)
         latch?.await(timeoutSeconds, TimeUnit.SECONDS)
         val out = lastResultUri
         latch = null
@@ -75,8 +75,8 @@ class SafKit(private val activity: Activity) {
     // ---------- COPY DIR appdir → SAF/songsFolder ----------
 
     /**
-     * Copia todo el árbol de srcDirAbs hacia el árbol SAF dentro de <destFolderName>/...
-     * Crea carpetas si faltan. Overwrite controla si reemplaza archivos existentes.
+     * Copies the entire tree from srcDirAbs to the SAF tree under <destFolderName>/...
+     * Creates folders if missing. Overwrite controls if existing files are replaced.
      */
     fun copyDirFromAppToSongs(srcDirAbs: String, destFolderName: String, overwrite: Boolean): Boolean {
         val tree = getPersistedSongsUri(activity) ?: return false
@@ -85,7 +85,7 @@ class SafKit(private val activity: Activity) {
         val srcRoot = File(srcDirAbs)
         if (!srcRoot.exists() || !srcRoot.isDirectory) return false
 
-        // Asegura el folder base (destFolderName)
+    // Ensure base folder (destFolderName)
         val base = ensureDir(root, destFolderName) ?: return false
 
         val stack = ArrayDeque<File>()
@@ -97,7 +97,7 @@ class SafKit(private val activity: Activity) {
             if (cur.isDirectory) {
                 val rel = srcRoot.toURI().relativize(cur.toURI()).path.trimEnd('/')
                 val parent = if (rel.isEmpty()) base else ensureDir(base, rel) ?: return false
-                // push hijos
+                // push children
                 cur.listFiles()?.forEach { stack.add(it) }
             } else {
                 val relPath = srcRoot.toURI().relativize(cur.toURI()).path // e.g. "charts/level.json"
@@ -127,7 +127,7 @@ class SafKit(private val activity: Activity) {
             existing == null -> parent.createFile("application/octet-stream", fileName)
             overwrite -> existing
             else -> {
-                // renombrar: name (1).ext
+                // rename: name (1).ext
                 val dot = fileName.lastIndexOf('.')
                 val stem = if (dot > 0) fileName.substring(0, dot) else fileName
                 val ext = if (dot > 0) fileName.substring(dot) else ""
@@ -160,7 +160,7 @@ class SafKit(private val activity: Activity) {
         return true
     }
 
-    // ---------- NEW: Helpers for I/O ----------
+    // ---------- Helpers for I/O ----------
 
     private fun getRoot(): DocumentFile? {
         val tree = getPersistedSongsUri(activity)
@@ -219,7 +219,7 @@ class SafKit(private val activity: Activity) {
 
     private fun jsonEscape(s: String): String = s.replace("\\", "\\\\").replace("\"", "\\\"")
 
-    // ---------- NEW: Public I/O API ----------
+    // ---------- Public I/O API ----------
 
     fun listDirJson(relPath: String): String? {
         Log.d("SafKit", "listDirJson(): relPath='$relPath'")
@@ -237,7 +237,7 @@ class SafKit(private val activity: Activity) {
         files.forEachIndexed { idx, f ->
             if (idx > 0) sb.append(',')
             val name = f.name ?: ""
-            if (idx < 10) { // limitar spam
+            if (idx < 10) { // limit logging spam
                 Log.d("SafKit", "listDirJson(): item[$idx] name='$name' isDir=${f.isDirectory} isFile=${f.isFile} uri=${f.uri}")
             }
             sb.append("{\"name\":\"")
@@ -330,11 +330,11 @@ class SafKit(private val activity: Activity) {
         return dir.delete()
     }
 
-    // ---------- NEW: COPY DIR SAF/<src> → app private dir ----------
+    // ---------- COPY DIR SAF/<src> → app private dir ----------
 
     /**
-     * Copia todo el árbol bajo SAF/<srcFolderRel> (o un archivo) hacia destAppDirAbs.
-     * Crea carpetas si faltan. Overwrite controla si reemplaza archivos existentes.
+     * Copies the entire tree under SAF/<srcFolderRel> (or a file) to destAppDirAbs.
+     * Creates folders if missing. Overwrite controls if existing files are replaced.
      */
     fun copyDirFromSongsToApp(srcFolderRel: String, destAppDirAbs: String, overwrite: Boolean): Boolean {
         Log.d("SafKit", "copyDirFromSongsToApp(): src='$srcFolderRel' dest='$destAppDirAbs' overwrite=$overwrite")
