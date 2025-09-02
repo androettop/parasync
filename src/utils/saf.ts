@@ -11,6 +11,10 @@ export class SafManager {
 
   private constructor() {}
 
+  async getDir(): Promise<string | null> {
+    return await invoke<string | null>("saf_get_dir");
+  }
+
   async pickDirectory() {
     await invoke<string | null>("saf_select_dir");
   }

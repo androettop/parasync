@@ -3,6 +3,7 @@ import { Song } from "../types/songs";
 import { IS_ANDROID } from "./mobile";
 import { SafManager } from "./saf";
 import { getAndroidTmpFolder, removeAndroidTmpFolder } from "./fs";
+import { v4 as uuid } from "uuid";
 
 // Utility function to format bytes
 export const formatBytes = (bytes: number, decimals = 2): string => {
@@ -70,9 +71,10 @@ export class DownloadManager {
     // if not android download directly in the destRoot
     // for android the download is made in the appDir/tmp folder and then copied with copyAppDirToSaf
     let destRoot = _destRoot;
+    let tmpUuid = uuid();
 
     if (IS_ANDROID) {
-      destRoot = await getAndroidTmpFolder();
+      destRoot = await getAndroidTmpFolder(tmpUuid);
     }
 
     try {
@@ -92,10 +94,11 @@ export class DownloadManager {
           if (IS_ANDROID) {
             try {
               await SafManager.getInstance().copyAppDirToSaf(destRoot, "");
-              await removeAndroidTmpFolder();
-            } catch {
+              await removeAndroidTmpFolder(tmpUuid);
+            } catch (e) {
               alert(
-                "Error copying the downloaded song, check the app file permissions",
+                "Error copying the downloaded song, check the app file permissions" +
+                  e,
               );
             }
           }

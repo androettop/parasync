@@ -205,12 +205,16 @@ export const getSongFolderPrefix = (
   return `${repoName}-${songId}-`;
 };
 
-export const getAndroidTmpFolder = async (): Promise<string> => {
-  return `${await path.appLocalDataDir()}/tmp/`;
+export const getAndroidTmpFolder = async (
+  subDir: string = "",
+): Promise<string> => {
+  return `${await path.appLocalDataDir()}/tmp/${subDir}`;
 };
 
-export const removeAndroidTmpFolder = async (): Promise<void> => {
-  const tmpDir = await getAndroidTmpFolder();
+export const removeAndroidTmpFolder = async (
+  subDir?: string,
+): Promise<void> => {
+  const tmpDir = await getAndroidTmpFolder(subDir);
   await remove(tmpDir, { recursive: true });
 };
 
