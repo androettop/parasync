@@ -1,5 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import { Song } from "../types/songs";
+import { IS_ANDROID } from "./mobile";
+import { SafManager } from "./saf";
+import { getAndroidTmpFolder, removeAndroidTmpFolder } from "./fs";
 
 // Utility function to format bytes
 export const formatBytes = (bytes: number, decimals = 2): string => {
@@ -51,7 +54,7 @@ export class DownloadManager {
     return this._instance;
   }
 
-  async start(key: string, song: Song, destRoot: string) {
+  private async start(key: string, song: Song, destRoot: string) {
     // Store song information for this download
     this.activeSongs.set(key, song);
 
@@ -63,14 +66,39 @@ export class DownloadManager {
     });
   }
 
-  async startAndWait(key: string, song: Song, destRoot: string) {
-    await this.start(key, song, destRoot);
+  async startAndWait(key: string, song: Song, _destRoot: string) {
+    // if not android download directly in the destRoot
+    // for android the download is made in the appDir/tmp folder and then copied with copyAppDirToSaf
+    let destRoot = _destRoot;
+
+    if (IS_ANDROID) {
+      destRoot = await getAndroidTmpFolder();
+    }
+
+    try {
+      await this.start(key, song, destRoot);
+    } catch (error) {
+      alert(
+        "An error occurred while starting the download, please try again later.",
+      );
+    }
+
     return new Promise<void>((resolve) => {
-      const off = this.onStatus((statuses) => {
+      const off = this.onStatus(async (statuses) => {
         if (!(key in statuses)) {
           // Clean up when download completes
           this.activeSongs.delete(key);
           off();
+          if (IS_ANDROID) {
+            try {
+              await SafManager.getInstance().copyAppDirToSaf(destRoot, "");
+              await removeAndroidTmpFolder();
+            } catch {
+              alert(
+                "Error copying the downloaded song, check the app file permissions",
+              );
+            }
+          }
           resolve();
         }
       });

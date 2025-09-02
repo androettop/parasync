@@ -49,7 +49,7 @@ export class SafManager {
   async copyAppDirToSaf(
     appDirAbs: string,
     destFolderName: string,
-    overwrite = false,
+    overwrite = true,
   ): Promise<boolean> {
     return await invoke("saf_copy_appdir_to_saf", {
       appDirAbs,

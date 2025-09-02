@@ -76,7 +76,7 @@ const SongsPage = () => {
 
   // Initialize repository
   useEffect(() => {
-    if (localSongs === null || repoRef.current) return;
+    if (repoRef.current) return;
     if (repoConfig) {
       repoRef.current = new SongRepository(repoConfig);
       handleSearch({
@@ -91,7 +91,7 @@ const SongsPage = () => {
         "No repository configuration found. Please set up your repositories in the settings.",
       );
     }
-  }, [repoConfig, localSongs]);
+  }, [repoConfig]);
 
   // Handlers
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {

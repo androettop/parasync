@@ -8,6 +8,7 @@ import {
 } from "@tauri-apps/plugin-fs";
 import { Difficulty, LocalSong, ParadiddleSong, Song } from "../types/songs";
 import { v4 as uuid } from "uuid";
+import * as path from "@tauri-apps/api/path";
 
 export const selectSongsDirectory = async () => {
   const file = await open({
@@ -200,6 +201,15 @@ export const getSongFolderPrefix = (
   repoName: string,
 ): string => {
   return `${repoName}-${songId}-`;
+};
+
+export const getAndroidTmpFolder = async (): Promise<string> => {
+  return `${await path.appLocalDataDir()}/tmp/`;
+};
+
+export const removeAndroidTmpFolder = async (): Promise<void> => {
+  const tmpDir = await getAndroidTmpFolder();
+  await remove(tmpDir, { recursive: true });
 };
 
 export const deleteSong = async (songsPath: string): Promise<void> => {

@@ -9,7 +9,6 @@ import {
   Toolbar,
   Typography,
 } from "@mui/material";
-import { platform } from "@tauri-apps/plugin-os";
 import React from "react";
 import { Link as RRLink, useNavigate } from "react-router";
 import SongCard from "../../components/SongCard/SongCard";
@@ -17,6 +16,7 @@ import useLocalSongs from "../../hooks/useLocalSongs";
 import useSongsPath from "../../hooks/useSongsPath";
 import { Difficulty, LocalSong } from "../../types/songs";
 import { deleteSong, selectSongsDirectory } from "../../utils/fs";
+import { IS_ANDROID } from "../../utils/mobile";
 import { SafManager } from "../../utils/saf";
 import { CARD_SIZE } from "../../utils/songs";
 
@@ -33,10 +33,9 @@ const MySongsPage = () => {
     const playerUrl = `/play?file=${encodeURIComponent(fileName)}`;
     navigate(playerUrl);
   };
-  const isAndroid = platform() === "android";
 
   const handleSelectSongsFolder = async () => {
-    if (isAndroid) {
+    if (IS_ANDROID) {
       try {
         await SafManager.getInstance().pickDirectory();
         const uri = SafManager.getInstance().uri;
