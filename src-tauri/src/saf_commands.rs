@@ -36,8 +36,6 @@ pub async fn saf_copy_saf_to_appdir(
     .map_err(|e| format!("Join error: {e}"))?
 }
 
-// --- NEW: SAF file operations ---
-
 #[tauri::command]
 pub fn saf_read_dir(path: String) -> Result<String, String> {
     SAF.read_dir(path)

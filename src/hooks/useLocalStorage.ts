@@ -38,7 +38,7 @@ const getLocalStorageServerSnapshot = (): never => {
   throw Error("useLocalStorage is a client-only hook");
 };
 
-// Hook principal
+// Main hook
 export function useLocalStorage<T>(
   key: string,
   initialValue?: T,

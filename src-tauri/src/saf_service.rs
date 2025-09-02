@@ -306,24 +306,24 @@ mod android_sys {
     use jni::{JNIEnv, JavaVM};
     use ndk_context::android_context;
 
-    /// Ejecuta `f` con (&mut JNIEnv, Activity as JObject)
+    /// Executes `f` with (&mut JNIEnv, Activity as JObject)
     pub fn with_env_activity<F, T>(f: F) -> Result<T, String>
     where
         F: FnOnce(&mut JNIEnv, JObject) -> Result<T, String>,
     {
         let ctx = android_context();
 
-        // Construye JavaVM desde puntero crudo
+    // Build JavaVM from raw pointer
         let vm_ptr = ctx.vm() as *mut jni::sys::JavaVM;
         let vm =
             unsafe { JavaVM::from_raw(vm_ptr) }.map_err(|e| format!("JavaVM::from_raw: {e}"))?;
 
-        // ¡Ojo! Necesitamos &mut JNIEnv
+    // Note: we need &mut JNIEnv
         let mut env = vm
             .attach_current_thread()
             .map_err(|e| format!("attach_current_thread: {e}"))?;
 
-        // Activity actual como JObject
+    // Current Activity as a JObject
         let activity_obj = unsafe { JObject::from_raw(ctx.context() as jni::sys::jobject) };
 
         f(&mut env, activity_obj)

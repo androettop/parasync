@@ -14,16 +14,16 @@ class MainActivity : TauriActivity() {
     Log.d("SafKit", "register() done")
     }
 
-    // --- Métodos llamados desde Rust (JNI) ---
+    // --- Methods called from Rust (JNI) ---
 
-    /** Abre selector SAF y bloquea hasta resultado. Devuelve String? (content://...) */
+    /** Opens the SAF picker and blocks until a result. Returns String? (content://...) */
     fun selectSongsDirBlocking(): String? {
     val res = safKit.selectSongsDirBlocking()
     Log.d("SafKit", "MainActivity.selectSongsDirBlocking -> ${'$'}res")
     return res
     }
 
-    /** Devuelve el URI persistido o null si no hay. */
+    /** Returns the persisted URI or null if none. */
     fun getSongsDirPersisted(): String? {
     val res = SafKit.getPersistedSongsUri(this)
     Log.d("SafKit", "MainActivity.getSongsDirPersisted -> ${'$'}res")
@@ -31,9 +31,9 @@ class MainActivity : TauriActivity() {
     }
 
     /**
-     * Copia todo appDirAbs (carpeta) a SAF/<destFolderName>
-     * - appDirAbs: p.ej. "/data/data/tu.app/files/resources/MySong"
-     * - destFolderName: p.ej. "MySong"
+     * Copies the entire appDirAbs (folder) to SAF/<destFolderName>
+     * - appDirAbs: e.g. "/data/data/your.app/files/resources/MySong"
+     * - destFolderName: e.g. "MySong"
      */
     fun copyDirFromAppToSongs(appDirAbs: String, destFolderName: String, overwrite: Boolean): Boolean {
     Log.d("SafKit", "MainActivity.copyDirFromAppToSongs(appDir='${'$'}appDirAbs', dest='${'$'}destFolderName', overwrite=${'$'}overwrite)")
@@ -42,7 +42,6 @@ class MainActivity : TauriActivity() {
     return ok
     }
 
-    // --- NEW: SAF I/O exposed for Rust JNI ---
 
     fun safListDir(relPath: String): String? {
         Log.d("SafKit", "MainActivity.safListDir(relPath='${'$'}relPath')")

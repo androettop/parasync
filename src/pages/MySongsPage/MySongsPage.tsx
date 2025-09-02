@@ -136,7 +136,7 @@ const MySongsPage = () => {
           </Typography>
         </Grid>
 
-        {/* Barra de acciones de selección */}
+        {/* Selection action bar */}
         {selectMode && (
           <AppBar
             position="static"
