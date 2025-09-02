@@ -93,7 +93,10 @@ const MySongsPage = () => {
             sx={{
               display: "flex",
               justifyContent: "space-between",
-              flexDirection: "row",
+              flexDirection: {
+                xs: "column",
+                sm: "row",
+              },
             }}
           >
             <Typography
@@ -104,21 +107,27 @@ const MySongsPage = () => {
             >
               My Songs
             </Typography>
-            <Box>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 2,
+                marginBottom: 1,
+              }}
+            >
               <Button
                 variant="outlined"
                 color="primary"
                 startIcon={<FolderOpenIcon />}
                 onClick={handleSelectSongsFolder}
               >
-                Choose Songs Folder
+                Set Songs Folder
               </Button>
 
               {songsCount > 0 && (
                 <Button
                   variant="outlined"
                   color={"primary"}
-                  sx={{ marginLeft: 2 }}
                   onClick={() => setSelectMode(true)}
                 >
                   Select songs
