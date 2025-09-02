@@ -19,3 +19,15 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+# Keep MainActivity methods called from native code (JNI). Replace package
+# if you change applicationId.
+-keepclassmembers class com.androettop.parasync.MainActivity {
+	public java.lang.String selectSongsDirBlocking();
+	public java.lang.String getSongsDirPersisted();
+	public boolean copyDirFromAppToSongs(java.lang.String, java.lang.String, boolean);
+	public boolean copyDirFromSongsToApp(java.lang.String, java.lang.String, boolean);
+	public java.lang.String safListDir(java.lang.String);
+	public java.lang.String safReadTextFile(java.lang.String);
+	public byte[] safReadFile(java.lang.String);
+	public boolean safRemove(java.lang.String, boolean);
+}

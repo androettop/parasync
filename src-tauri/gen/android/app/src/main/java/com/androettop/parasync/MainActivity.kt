@@ -1,7 +1,9 @@
 package com.androettop.parasync
 import android.os.Bundle
 import android.util.Log
+import androidx.annotation.Keep
 
+@Keep
 class MainActivity : TauriActivity() {
     lateinit var safKit: SafKit
 
