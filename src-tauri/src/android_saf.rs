@@ -58,4 +58,50 @@ pub mod android_saf {
         }
         Some(out)
     }
+
+    pub fn write_all_bytes(uri: &str, data: &[u8]) -> Option<()> {
+        let (env, context) = get_env_and_context()?;
+        let uri_js: JString = env.new_string(uri).ok()?;
+        let class = env.find_class("com/androettop/parasync/SafKit").ok()?;
+        let jarr = env.byte_array_from_slice(data).ok()?;
+        let _ = env
+            .call_static_method(
+                class,
+                "writeAllBytes",
+                "(Landroid/content/Context;Ljava/lang/String;[B)V",
+                &[JValue::Object(&context), JValue::Object(&uri_js), JValue::Object(&JObject::from(jarr))],
+            )
+            .ok()?;
+        Some(())
+    }
+
+    pub fn ensure_dir(uri: &str) -> Option<bool> {
+        let (env, context) = get_env_and_context()?;
+        let uri_js: JString = env.new_string(uri).ok()?;
+        let class = env.find_class("com/androettop/parasync/SafKit").ok()?;
+        let ok = env
+            .call_static_method(
+                class,
+                "ensureDir",
+                "(Landroid/content/Context;Ljava/lang/String;)Z",
+                &[JValue::Object(&context), JValue::Object(&uri_js)],
+            )
+            .ok()?;
+        Some(ok.z().ok()?)
+    }
+
+    pub fn delete_recursively(uri: &str) -> Option<bool> {
+        let (env, context) = get_env_and_context()?;
+        let uri_js: JString = env.new_string(uri).ok()?;
+        let class = env.find_class("com/androettop/parasync/SafKit").ok()?;
+        let ok = env
+            .call_static_method(
+                class,
+                "deleteRecursively",
+                "(Landroid/content/Context;Ljava/lang/String;)Z",
+                &[JValue::Object(&context), JValue::Object(&uri_js)],
+            )
+            .ok()?;
+        Some(ok.z().ok()?)
+    }
 }

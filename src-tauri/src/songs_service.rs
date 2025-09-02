@@ -1,7 +1,7 @@
 use crate::file_service::FileService;
 use serde::{Deserialize, Serialize};
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use uuid::Uuid;
 
 // ----- Types mirrored from src/types/songs.ts -----
