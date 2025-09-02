@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.documentfile.provider.DocumentFile
@@ -162,19 +163,46 @@ class SafKit(private val activity: Activity) {
     // ---------- NEW: Helpers for I/O ----------
 
     private fun getRoot(): DocumentFile? {
-        val tree = getPersistedSongsUri(activity) ?: return null
-        return DocumentFile.fromTreeUri(activity, Uri.parse(tree))
+        val tree = getPersistedSongsUri(activity)
+        if (tree == null) {
+            Log.w("SafKit", "getRoot(): persisted tree URI is null")
+            return null
+        }
+        Log.d("SafKit", "getRoot(): treeUri=$tree")
+        val root = DocumentFile.fromTreeUri(activity, Uri.parse(tree))
+        if (root == null) {
+            Log.w("SafKit", "getRoot(): DocumentFile.fromTreeUri returned null")
+        } else {
+            Log.d("SafKit", "getRoot(): root.name=${root.name} uri=${root.uri}")
+        }
+        return root
     }
 
     private fun normalize(relPath: String): List<String> = relPath.trim('/').split('/').filter { it.isNotEmpty() }
 
     private fun resolve(relPath: String): DocumentFile? {
-        var cur = getRoot() ?: return null
-        val parts = normalize(relPath)
-        if (parts.isEmpty()) return cur
-        for (seg in parts) {
-            cur = cur.findFile(seg) ?: return null
+        Log.d("SafKit", "resolve(): relPath='$relPath'")
+        var cur = getRoot() ?: run {
+            Log.w("SafKit", "resolve(): root is null")
+            return null
         }
+        val parts = normalize(relPath)
+        Log.d("SafKit", "resolve(): parts=$parts")
+        if (parts.isEmpty()) {
+            Log.d("SafKit", "resolve(): no parts -> returning root: uri=${cur.uri}")
+            return cur
+        }
+        for (seg in parts) {
+            Log.d("SafKit", "resolve(): finding seg='$seg' under uri=${cur.uri}")
+            val next = cur.findFile(seg)
+            if (next == null) {
+                Log.w("SafKit", "resolve(): segment not found -> '$seg'")
+                return null
+            }
+            Log.d("SafKit", "resolve(): found '$seg' -> uri=${next.uri} isDir=${next.isDirectory} isFile=${next.isFile}")
+            cur = next
+        }
+        Log.d("SafKit", "resolve(): result uri=${cur.uri} isDir=${cur.isDirectory} isFile=${cur.isFile}")
         return cur
     }
 
@@ -194,13 +222,24 @@ class SafKit(private val activity: Activity) {
     // ---------- NEW: Public I/O API ----------
 
     fun listDirJson(relPath: String): String? {
-        val dir = resolve(relPath) ?: return "[]"
-        if (!dir.isDirectory) return "[]"
+        Log.d("SafKit", "listDirJson(): relPath='$relPath'")
+        val dir = resolve(relPath) ?: run {
+            Log.w("SafKit", "listDirJson(): resolve returned null for '$relPath'")
+            return "[]"
+        }
+        if (!dir.isDirectory) {
+            Log.w("SafKit", "listDirJson(): target is not a directory uri=${dir.uri}")
+            return "[]"
+        }
         val files = dir.listFiles()
+        Log.d("SafKit", "listDirJson(): listing uri=${dir.uri} count=${files.size}")
         val sb = StringBuilder("[")
         files.forEachIndexed { idx, f ->
             if (idx > 0) sb.append(',')
             val name = f.name ?: ""
+            if (idx < 10) { // limitar spam
+                Log.d("SafKit", "listDirJson(): item[$idx] name='$name' isDir=${f.isDirectory} isFile=${f.isFile} uri=${f.uri}")
+            }
             sb.append("{\"name\":\"")
                 .append(jsonEscape(name))
                 .append("\",\"isFile\":")
@@ -214,17 +253,32 @@ class SafKit(private val activity: Activity) {
     }
 
     fun readTextFile(relPath: String): String? {
-        val file = resolve(relPath) ?: return null
-        if (!file.isFile) return null
+        Log.d("SafKit", "readTextFile(): relPath='$relPath'")
+        val file = resolve(relPath) ?: run {
+            Log.w("SafKit", "readTextFile(): resolve returned null for '$relPath'")
+            return null
+        }
+        if (!file.isFile) {
+            Log.w("SafKit", "readTextFile(): target is not a file uri=${file.uri}")
+            return null
+        }
         activity.contentResolver.openInputStream(file.uri)?.use { ins ->
             return ins.bufferedReader(Charsets.UTF_8).readText()
         }
+        Log.w("SafKit", "readTextFile(): openInputStream returned null uri=${file.uri}")
         return null
     }
 
     fun readFile(relPath: String): ByteArray? {
-        val file = resolve(relPath) ?: return null
-        if (!file.isFile) return null
+        Log.d("SafKit", "readFile(): relPath='$relPath'")
+        val file = resolve(relPath) ?: run {
+            Log.w("SafKit", "readFile(): resolve returned null for '$relPath'")
+            return null
+        }
+        if (!file.isFile) {
+            Log.w("SafKit", "readFile(): target is not a file uri=${file.uri}")
+            return null
+        }
         activity.contentResolver.openInputStream(file.uri)?.use { ins ->
             val bos = ByteArrayOutputStream()
             val buf = ByteArray(DEFAULT_BUFFER_SIZE)
@@ -233,22 +287,35 @@ class SafKit(private val activity: Activity) {
                 if (r <= 0) break
                 bos.write(buf, 0, r)
             }
+            Log.d("SafKit", "readFile(): read ${'$'}{bos.size()} bytes from uri=${file.uri}")
             return bos.toByteArray()
         }
+        Log.w("SafKit", "readFile(): openInputStream returned null uri=${file.uri}")
         return null
     }
 
     fun removePath(relPath: String, recursive: Boolean): Boolean {
-        val target = resolve(relPath) ?: return false
-        return if (target.isFile) {
-            target.delete()
+        Log.d("SafKit", "removePath(): relPath='$relPath' recursive=${'$'}recursive")
+        val target = resolve(relPath) ?: run {
+            Log.w("SafKit", "removePath(): resolve returned null for '$relPath'")
+            return false
+        }
+        val ok = if (target.isFile) {
+            val res = target.delete()
+            Log.d("SafKit", "removePath(): delete file uri=${target.uri} -> ${'$'}res")
+            res
         } else {
             if (!recursive) {
-                target.delete()
+                val res = target.delete()
+                Log.d("SafKit", "removePath(): delete dir (non-recursive) uri=${target.uri} -> ${'$'}res")
+                res
             } else {
-                deleteRecursively(target)
+                val res = deleteRecursively(target)
+                Log.d("SafKit", "removePath(): delete dir (recursive) uri=${target.uri} -> ${'$'}res")
+                res
             }
         }
+        return ok
     }
 
     private fun deleteRecursively(dir: DocumentFile): Boolean {
