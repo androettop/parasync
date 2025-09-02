@@ -62,10 +62,10 @@ impl SafService {
     }
 
     pub fn copy_appdir_to_saf(
-        &self,
-        app_dir_abs: String,
-        dest_folder_name: String,
-        overwrite: bool,
+    &self,
+    _app_dir_abs: String,
+    _dest_folder_name: String,
+    _overwrite: bool,
     ) -> Result<bool, String> {
         #[cfg(target_os = "android")]
         {
@@ -98,10 +98,10 @@ impl SafService {
     }
 
     pub fn copy_saf_to_appdir(
-        &self,
-        src_folder_rel: String,
-        dest_app_dir_abs: String,
-        overwrite: bool,
+    &self,
+    _src_folder_rel: String,
+    _dest_app_dir_abs: String,
+    _overwrite: bool,
     ) -> Result<bool, String> {
         #[cfg(target_os = "android")]
         {
@@ -137,7 +137,7 @@ impl SafService {
 
     /// List a directory under the persisted SAF root. `path` is a relative path from the root.
     /// Returns a JSON array string of entries with fields: name, isFile, isDirectory
-    pub fn read_dir(&self, path: String) -> Result<String, String> {
+    pub fn read_dir(&self, _path: String) -> Result<String, String> {
         #[cfg(target_os = "android")]
         {
             android_sys::with_env_activity(|env, activity| {
@@ -172,7 +172,7 @@ impl SafService {
     }
 
     /// Read a UTF-8 text file under the SAF root.
-    pub fn read_text_file(&self, path: String) -> Result<String, String> {
+    pub fn read_text_file(&self, _path: String) -> Result<String, String> {
         #[cfg(target_os = "android")]
         {
             android_sys::with_env_activity(|env, activity| {
@@ -207,7 +207,7 @@ impl SafService {
     }
 
     /// Read raw bytes from a file under the SAF root.
-    pub fn read_file(&self, path: String) -> Result<Vec<u8>, String> {
+    pub fn read_file(&self, _path: String) -> Result<Vec<u8>, String> {
         #[cfg(target_os = "android")]
         {
             android_sys::with_env_activity(|env, activity| {
@@ -241,7 +241,7 @@ impl SafService {
     }
 
     /// Remove a file or directory under the SAF root. If directory and recursive=true, delete its contents.
-    pub fn remove(&self, path: String, recursive: bool) -> Result<bool, String> {
+    pub fn remove(&self, _path: String, _recursive: bool) -> Result<bool, String> {
         #[cfg(target_os = "android")]
         {
             android_sys::with_env_activity(|env, activity| {

@@ -43,9 +43,9 @@ jni = { version = "0.21", default-features = false }
 ndk-context = "0.1"
 
 # Android specific build configuration
-[target.aarch64-linux-android]
-linker = "aarch64-linux-android28-clang"
 
-[target.armv7-linux-androideabi]
-linker = "armv7a-linux-androideabi28-clang"
+# Note: target-specific linker configuration belongs in .cargo/config.toml
+# If you need custom linkers for Android targets, create a `.cargo/config.toml`
+# with a `target.<triple>.linker` entry. Removed from Cargo.toml because
+# Cargo treats these keys as unused in the manifest.
 
