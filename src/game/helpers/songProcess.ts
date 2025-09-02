@@ -166,7 +166,7 @@ export const createDividerNoteActors = (instruments: string[]) => {
       GAME_CONFIG.highwayWidth / (instruments.length * 2) -
       GAME_CONFIG.highwayWidth / 2;
 
-    const pos = vec(posX, -4);
+    const pos = vec(posX, -2);
     let dividerImage: ImageSource | null = null;
 
     switch (instrument) {

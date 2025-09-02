@@ -5,14 +5,21 @@ pub static SAF: Lazy<SafService> = Lazy::new(SafService::new);
 pub struct SafService;
 
 impl SafService {
-    fn new() -> Self { Self }
+    fn new() -> Self {
+        Self
+    }
 
     pub fn select_songs_dir(&self) -> Result<Option<String>, String> {
         #[cfg(target_os = "android")]
         {
             android_sys::with_env_activity(|env, activity| {
                 let ret = env
-                    .call_method(activity, "selectSongsDirBlocking", "()Ljava/lang/String;", &[])
+                    .call_method(
+                        activity,
+                        "selectSongsDirBlocking",
+                        "()Ljava/lang/String;",
+                        &[],
+                    )
                     .map_err(|e| format!("JNI call selectSongsDirBlocking: {e:?}"))?
                     .l()
                     .map_err(|e| format!("{e:?}"))?;
@@ -31,7 +38,9 @@ impl SafService {
             })
         }
         #[cfg(not(target_os = "android"))]
-        { Ok(None) }
+        {
+            Ok(None)
+        }
     }
 
     pub fn get_persisted_songs_dir(&self) -> Result<Option<String>, String> {
@@ -39,7 +48,12 @@ impl SafService {
         {
             android_sys::with_env_activity(|env, activity| {
                 let ret = env
-                    .call_method(activity, "getSongsDirPersisted", "()Ljava/lang/String;", &[])
+                    .call_method(
+                        activity,
+                        "getSongsDirPersisted",
+                        "()Ljava/lang/String;",
+                        &[],
+                    )
                     .map_err(|e| format!("JNI call getSongsDirPersisted: {e:?}"))?
                     .l()
                     .map_err(|e| format!("{e:?}"))?;
@@ -58,22 +72,26 @@ impl SafService {
             })
         }
         #[cfg(not(target_os = "android"))]
-        { Ok(None) }
+        {
+            Ok(None)
+        }
     }
 
     pub fn copy_appdir_to_saf(
-    &self,
-    _app_dir_abs: String,
-    _dest_folder_name: String,
-    _overwrite: bool,
+        &self,
+        app_dir_abs: String,
+        dest_folder_name: String,
+        overwrite: bool,
     ) -> Result<bool, String> {
         #[cfg(target_os = "android")]
         {
             android_sys::with_env_activity(|env, activity| {
                 use jni::objects::JValue;
 
-                let j_app  = env.new_string(app_dir_abs).map_err(|e| e.to_string())?;
-                let j_dest = env.new_string(dest_folder_name).map_err(|e| e.to_string())?;
+                let j_app = env.new_string(app_dir_abs).map_err(|e| e.to_string())?;
+                let j_dest = env
+                    .new_string(dest_folder_name)
+                    .map_err(|e| e.to_string())?;
 
                 let ok = env
                     .call_method(
@@ -94,14 +112,20 @@ impl SafService {
             })
         }
         #[cfg(not(target_os = "android"))]
-        { Ok(false) }
+        {
+            println!(
+                "Not implemented on this platform. {},{},{}",
+                app_dir_abs, dest_folder_name, overwrite
+            );
+            Ok(false)
+        }
     }
 
     pub fn copy_saf_to_appdir(
-    &self,
-    _src_folder_rel: String,
-    _dest_app_dir_abs: String,
-    _overwrite: bool,
+        &self,
+        src_folder_rel: String,
+        dest_app_dir_abs: String,
+        overwrite: bool,
     ) -> Result<bool, String> {
         #[cfg(target_os = "android")]
         {
@@ -109,7 +133,9 @@ impl SafService {
                 use jni::objects::JValue;
 
                 let j_src = env.new_string(src_folder_rel).map_err(|e| e.to_string())?;
-                let j_dst = env.new_string(dest_app_dir_abs).map_err(|e| e.to_string())?;
+                let j_dst = env
+                    .new_string(dest_app_dir_abs)
+                    .map_err(|e| e.to_string())?;
 
                 let ok = env
                     .call_method(
@@ -130,14 +156,17 @@ impl SafService {
             })
         }
         #[cfg(not(target_os = "android"))]
-        { Ok(false) }
+        {
+            println!("Not implemented on this platform. {},{},{}", src_folder_rel, dest_app_dir_abs, overwrite);
+            Ok(false)
+        }
     }
 
     // --- NEW: SAF file operations (Android only) ---
 
     /// List a directory under the persisted SAF root. `path` is a relative path from the root.
     /// Returns a JSON array string of entries with fields: name, isFile, isDirectory
-    pub fn read_dir(&self, _path: String) -> Result<String, String> {
+    pub fn read_dir(&self, path: String) -> Result<String, String> {
         #[cfg(target_os = "android")]
         {
             android_sys::with_env_activity(|env, activity| {
@@ -167,12 +196,13 @@ impl SafService {
         }
         #[cfg(not(target_os = "android"))]
         {
+            println!("Not implemented on this platform. {}", path);
             Ok("[]".to_string())
         }
     }
 
     /// Read a UTF-8 text file under the SAF root.
-    pub fn read_text_file(&self, _path: String) -> Result<String, String> {
+    pub fn read_text_file(&self, path: String) -> Result<String, String> {
         #[cfg(target_os = "android")]
         {
             android_sys::with_env_activity(|env, activity| {
@@ -202,12 +232,13 @@ impl SafService {
         }
         #[cfg(not(target_os = "android"))]
         {
+            println!("Not implemented on this platform. {}", path);
             Err("Not implemented on this platform".into())
         }
     }
 
     /// Read raw bytes from a file under the SAF root.
-    pub fn read_file(&self, _path: String) -> Result<Vec<u8>, String> {
+    pub fn read_file(&self, path: String) -> Result<Vec<u8>, String> {
         #[cfg(target_os = "android")]
         {
             android_sys::with_env_activity(|env, activity| {
@@ -236,12 +267,13 @@ impl SafService {
         }
         #[cfg(not(target_os = "android"))]
         {
+            println!("Not implemented on this platform. {}", path);
             Err("Not implemented on this platform".into())
         }
     }
 
     /// Remove a file or directory under the SAF root. If directory and recursive=true, delete its contents.
-    pub fn remove(&self, _path: String, _recursive: bool) -> Result<bool, String> {
+    pub fn remove(&self, path: String, recursive: bool) -> Result<bool, String> {
         #[cfg(target_os = "android")]
         {
             android_sys::with_env_activity(|env, activity| {
@@ -262,6 +294,7 @@ impl SafService {
         }
         #[cfg(not(target_os = "android"))]
         {
+            println!("Not implemented on this platform. {},{}", path, recursive);
             Ok(false)
         }
     }
@@ -269,8 +302,8 @@ impl SafService {
 
 #[cfg(target_os = "android")]
 mod android_sys {
-    use jni::{JNIEnv, JavaVM};
     use jni::objects::JObject;
+    use jni::{JNIEnv, JavaVM};
     use ndk_context::android_context;
 
     /// Ejecuta `f` con (&mut JNIEnv, Activity as JObject)
@@ -282,17 +315,16 @@ mod android_sys {
 
         // Construye JavaVM desde puntero crudo
         let vm_ptr = ctx.vm() as *mut jni::sys::JavaVM;
-        let vm = unsafe { JavaVM::from_raw(vm_ptr) }
-            .map_err(|e| format!("JavaVM::from_raw: {e}"))?;
+        let vm =
+            unsafe { JavaVM::from_raw(vm_ptr) }.map_err(|e| format!("JavaVM::from_raw: {e}"))?;
 
         // ¡Ojo! Necesitamos &mut JNIEnv
-        let mut env = vm.attach_current_thread()
+        let mut env = vm
+            .attach_current_thread()
             .map_err(|e| format!("attach_current_thread: {e}"))?;
 
         // Activity actual como JObject
-        let activity_obj = unsafe {
-            JObject::from_raw(ctx.context() as jni::sys::jobject)
-        };
+        let activity_obj = unsafe { JObject::from_raw(ctx.context() as jni::sys::jobject) };
 
         f(&mut env, activity_obj)
     }

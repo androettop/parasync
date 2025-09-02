@@ -22,7 +22,7 @@ import { CARD_SIZE } from "../../utils/songs";
 
 const MySongsPage = () => {
   const [songsPath, setSongsPath] = useSongsPath();
-  const { songs, refresh } = useLocalSongs();
+  const { songs, loading, refresh } = useLocalSongs();
   const [selectMode, setSelectMode] = React.useState(false);
   const [selectedSongs, setSelectedSongs] = React.useState<string[]>([]);
 

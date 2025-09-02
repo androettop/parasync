@@ -6,14 +6,17 @@ import { getLocalSongs } from "../utils/fs";
 import { releaseFileUrl } from "../game/helpers/filesLoader";
 
 const useLocalSongs = () => {
+  const [loading, setLoading] = useState(false);
   const [songs, setSongs] = useState<LocalSong[] | null>(null);
   const [songsPath] = useSongsPath();
 
   const handleLoadSongs = useStaticHandler(async (songsPath) => {
+    setLoading(true);
     if (songsPath) {
       const songs = await getLocalSongs(songsPath);
       setSongs(songs);
     }
+    setLoading(false);
   });
 
   const revokeCovers = useStaticHandler(() => {
@@ -32,7 +35,7 @@ const useLocalSongs = () => {
     handleLoadSongs(songsPath);
   };
 
-  return { songs, refresh };
+  return { songs, refresh, loading };
 };
 
 export default useLocalSongs;
