@@ -1,7 +1,7 @@
 use crate::file_service::FileService;
 use serde::{Deserialize, Serialize};
 use std::io;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
 // ----- Types mirrored from src/types/songs.ts -----
@@ -112,8 +112,13 @@ impl SongsService {
     }
 
     pub fn load_song(songs_path: &str, song_dir_name: &str) -> Result<Option<LocalSong>, String> {
-        let song_path = Path::new(songs_path).join(song_dir_name);
-        let entries = FileService::read_dir(&song_path).map_err(|e| e.to_string())?;
+        // Build a path or SAF URI for the song directory
+        let song_path_str = if FileService::is_content_uri(songs_path) {
+            format!("{}?rel={}", songs_path, song_dir_name)
+        } else {
+            Path::new(songs_path).join(song_dir_name).to_string_lossy().to_string()
+        };
+        let entries = FileService::read_dir(&song_path_str).map_err(|e| e.to_string())?;
         let mut difficulties: Vec<String> = Vec::new();
         let mut song: Option<Song> = None;
         let mut base_file_name = String::new();
@@ -124,10 +129,19 @@ impl SongsService {
                     let last_us = ent.name.rfind('_').unwrap_or(0);
                     if song.is_none() {
                         base_file_name = ent.name[..last_us].to_string();
-                        let pdata = Self::get_paradiddle_song(&song_path.join(&ent.name))?;
-                        let cover_path = song_path.join(&pdata.recording_metadata.cover_image_path);
+                        let song_file_path = if FileService::is_content_uri(songs_path) {
+                            format!("{}?rel={}/{}", songs_path, song_dir_name, ent.name)
+                        } else {
+                            Path::new(&song_path_str).join(&ent.name).to_string_lossy().to_string()
+                        };
+                        let pdata = Self::get_paradiddle_song(&song_file_path)?;
+                        let cover_path = if FileService::is_content_uri(songs_path) {
+                            format!("{}?rel={}/{}", songs_path, song_dir_name, pdata.recording_metadata.cover_image_path)
+                        } else {
+                            Path::new(&song_path_str).join(&pdata.recording_metadata.cover_image_path).to_string_lossy().to_string()
+                        };
                         // We can't send bytes as URL here; front will request via a command that returns bytes
-                        let cover_url = Some(cover_path.to_string_lossy().to_string());
+                        let cover_url = Some(cover_path);
                         song = Some(Song {
                             title: pdata.recording_metadata.title.clone(),
                             artist: pdata.recording_metadata.artist.clone(),
@@ -157,9 +171,9 @@ impl SongsService {
         }
     }
 
-    pub fn get_paradiddle_song(path: &Path) -> Result<ParadiddleSong, String> {
+    pub fn get_paradiddle_song(path: &str) -> Result<ParadiddleSong, String> {
         // Read bytes and detect encoding similar to TS logic
-        let bytes = FileService::read_file_bytes(&path.to_string_lossy()).map_err(|e| e.to_string())?;
+        let bytes = FileService::read_file_bytes(path).map_err(|e| e.to_string())?;
         let json = decode_text_best_effort(bytes).map_err(|e| e.to_string())?;
         let cleaned = clean_json_like(&json);
         serde_json::from_str::<ParadiddleSong>(&cleaned).map_err(|e| e.to_string())

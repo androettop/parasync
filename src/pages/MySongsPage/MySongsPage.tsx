@@ -17,7 +17,6 @@ import useSongsPath from "../../hooks/useSongsPath";
 import { Difficulty, LocalSong } from "../../types/songs";
 import { deleteSong, selectSongsDirectory } from "../../utils/fs";
 import { CARD_SIZE } from "../../utils/songs";
-import { platform } from "@tauri-apps/plugin-os";
 
 const MySongsPage = () => {
   const [songsPath, setSongsPath] = useSongsPath();
@@ -36,11 +35,12 @@ const MySongsPage = () => {
   const handleSelectSongsFolder = async () => {
     const newSongsPath = await selectSongsDirectory();
     if (newSongsPath) {
-      setSongsPath(newSongsPath);
+      // On Android this may return a content URI; on desktop a filesystem path.
+      setSongsPath(String(newSongsPath));
     }
   };
 
-  const isAndroid = platform() === "android";
+  // platform used indirectly; selection works on all platforms
 
   const handleToggleSong = (baseFileName: string) => {
     setSelectedSongs((prev) =>
@@ -97,7 +97,7 @@ const MySongsPage = () => {
               My Songs
             </Typography>
             <Box>
-              {!isAndroid && (
+              {
                 <Button
                   variant="outlined"
                   color="primary"
@@ -106,7 +106,7 @@ const MySongsPage = () => {
                 >
                   Choose Songs Folder
                 </Button>
-              )}
+              }
               {songsCount > 0 && (
                 <Button
                   variant="outlined"

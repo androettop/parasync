@@ -2,7 +2,7 @@ use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use crossbeam_channel::{unbounded, bounded, Sender, Receiver};
 use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink, Source};
-use std::{io::BufReader, time::Instant};
+use std::{io::{BufReader, Cursor}, time::Instant};
 use serde::Serialize;
 use crate::file_service::FileService;
 
@@ -404,15 +404,27 @@ impl MixedSource {
     ) -> Result<Self, String> {
         let mut tracks = Vec::with_capacity(paths.len());
 
-    for p in paths {
-            let file = FileService::open_file(&p).map_err(|e| format!("Could not open {p}: {e}"))?;
-            let decoder = Decoder::new(BufReader::new(file))
-                .map_err(|e| format!("Could not decode {p}: {e}"))?;
+        for p in paths {
+            // Create a dynamic source so both branches match types
+            let (in_ch, in_sr, src_any): (usize, u32, Box<dyn Iterator<Item = f32> + Send>) = if FileService::is_content_uri(&p) {
+                let bytes = FileService::read_file_bytes(&p).map_err(|e| format!("Could not read {p}: {e}"))?;
+                let decoder = Decoder::new(BufReader::new(Cursor::new(bytes)))
+                    .map_err(|e| format!("Could not decode {p}: {e}"))?;
+                let ch = decoder.channels() as usize;
+                let sr = decoder.sample_rate();
+                let iter = decoder.convert_samples::<f32>();
+                (ch, sr, Box::new(iter))
+            } else {
+                let file = FileService::open_file(&p).map_err(|e| format!("Could not open {p}: {e}"))?;
+                let decoder = Decoder::new(BufReader::new(file))
+                    .map_err(|e| format!("Could not decode {p}: {e}"))?;
+                let ch = decoder.channels() as usize;
+                let sr = decoder.sample_rate();
+                let iter = decoder.convert_samples::<f32>();
+                (ch, sr, Box::new(iter))
+            };
 
-            let in_ch = decoder.channels() as usize;
-            let in_sr = decoder.sample_rate();
-
-            let src = decoder.convert_samples::<f32>();
+            let src = src_any;
             let mut trk = TrackStream::new(Box::new(src), in_ch, in_sr, out_ch as usize, out_sr);
             trk.skip_to_seconds(start_sec);
 

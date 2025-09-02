@@ -1,4 +1,4 @@
-import { readFile } from "@tauri-apps/plugin-fs";
+import { invoke } from "@tauri-apps/api/core";
 
 /**
  * Releases the resources used by a URL object
@@ -14,9 +14,10 @@ export const releaseFileUrl = (url?: string): void => {
  */
 export const loadFile = async (filename: string): Promise<string | null> => {
   try {
-    // Try to get the file directly from the song folder
-    const file = await readFile(filename);
-    const blob = new Blob([file], { type: "application/octet-stream" });
+    const bytes: number[] = await invoke("get_image_bytes", { path: filename });
+    const blob = new Blob([new Uint8Array(bytes)], {
+      type: "application/octet-stream",
+    });
     return URL.createObjectURL(blob);
   } catch (error) {
     console.error(`Error loading image file ${filename}:`, error);

@@ -27,8 +27,7 @@ pub fn load_song(songs_path: String, song_dir_name: String) -> Result<Option<Loc
 
 #[tauri::command]
 pub fn get_paradiddle_song(path: String) -> Result<ParadiddleSong, String> {
-    use std::path::PathBuf;
-    SongsService::get_paradiddle_song(&PathBuf::from(path))
+    SongsService::get_paradiddle_song(&path)
 }
 
 #[tauri::command]

@@ -43,6 +43,7 @@ chrono = { version = "0.4", default-features = false, features = ["clock", "std"
 [target.'cfg(target_os = "android")'.dependencies]
 libc = "0.2"
 jni = "0.21"
+ndk-context = "0.1"
 
 # Android specific build configuration
 [target.aarch64-linux-android]

@@ -55,6 +55,24 @@ impl FileService {
     }
 
     pub fn read_dir(path: impl AsRef<Path>) -> io::Result<Vec<DirEntryLite>> {
+        #[cfg(target_os = "android")]
+        {
+            // If it's a content tree URI, list via SAF
+            let pstr = path.as_ref().to_string_lossy().to_string();
+            if Self::is_content_uri(&pstr) {
+                // Use android_saf to list children
+                match crate::android_saf::android_saf::list_children(&pstr) {
+                    Some(list) => {
+                        let mut out = Vec::with_capacity(list.len());
+                        for (name, is_dir) in list {
+                            out.push(DirEntryLite { name, is_file: !is_dir, is_directory: is_dir });
+                        }
+                        return Ok(out);
+                    }
+                    None => return Err(io::Error::new(io::ErrorKind::Other, "SAF list_children failed")),
+                }
+            }
+        }
         let mut out = Vec::new();
         for ent in fs::read_dir(path)? {
             let ent = ent?;
@@ -70,13 +88,12 @@ impl FileService {
     }
 
     pub fn read_file_bytes(path: &str) -> io::Result<Vec<u8>> {
-        if IS_ANDROID && Self::is_content_uri(path) {
-            // Placeholder: future SAF bridge
-            // For now, return error to make it explicit if accidentally used.
-            return Err(io::Error::new(
-                io::ErrorKind::Unsupported,
-                "Reading content:// URIs is not yet implemented",
-            ));
+        #[cfg(target_os = "android")]
+        if Self::is_content_uri(path) {
+            match crate::android_saf::android_saf::read_all_bytes(path) {
+                Some(bytes) => return Ok(bytes),
+                None => return Err(io::Error::new(io::ErrorKind::Other, "SAF read_all_bytes failed")),
+            }
         }
         fs::read(Path::new(path))
     }
