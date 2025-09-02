@@ -5,7 +5,6 @@ import {
   readFile,
   mkdir,
   remove,
-  DirEntry,
 } from "@tauri-apps/plugin-fs";
 import { Difficulty, LocalSong, ParadiddleSong, Song } from "../types/songs";
 import { v4 as uuid } from "uuid";
@@ -114,15 +113,8 @@ export const loadSong = async (
   songDirPath: string,
 ): Promise<LocalSong | null> => {
   const songPath = `${songsPath}/${songDirPath}`;
-  let songDir: DirEntry[] | null = null;
-  try {
-    alert("Reading song dir: " + songPath);
-    songDir = await readDir(songPath);
-    alert("Read song dir entries: " + songDir.length);
-  } catch (error) {
-    alert("Error reading song dir: " + error);
-    return null;
-  }
+  const songDir = await readDir(songPath);
+
   const difficulties: Difficulty[] = [];
   let song: Song | null = null;
   let baseFileName = "";
@@ -130,7 +122,6 @@ export const loadSong = async (
   for (const entry of songDir) {
     if (entry.isFile) {
       const lastUnderscoreIndex = entry.name.lastIndexOf("_");
-
       // if the song data is not loaded and it is a rlrr file readit
       if (!song && entry.name.endsWith(".rlrr")) {
         try {

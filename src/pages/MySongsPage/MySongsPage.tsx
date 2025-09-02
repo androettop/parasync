@@ -9,6 +9,7 @@ import {
   Toolbar,
   Typography,
 } from "@mui/material";
+import { platform } from "@tauri-apps/plugin-os";
 import React from "react";
 import { Link as RRLink, useNavigate } from "react-router";
 import SongCard from "../../components/SongCard/SongCard";
@@ -16,10 +17,8 @@ import useLocalSongs from "../../hooks/useLocalSongs";
 import useSongsPath from "../../hooks/useSongsPath";
 import { Difficulty, LocalSong } from "../../types/songs";
 import { deleteSong, selectSongsDirectory } from "../../utils/fs";
-import { CARD_SIZE } from "../../utils/songs";
-import { platform } from "@tauri-apps/plugin-os";
 import { SafManager } from "../../utils/saf";
-import * as path from "@tauri-apps/api/path";
+import { CARD_SIZE } from "../../utils/songs";
 
 const MySongsPage = () => {
   const [songsPath, setSongsPath] = useSongsPath();
@@ -38,19 +37,15 @@ const MySongsPage = () => {
 
   const handleSelectSongsFolder = async () => {
     if (isAndroid) {
-      if (!songsPath) return;
-
-      await SafManager.getInstance().pickDirectory();
-      alert(SafManager.getInstance().songsPath);
       try {
-        await SafManager.getInstance().copyAppDirToSaf(
-          await path.join(songsPath, "sampleapi-M52E7F7-Time"),
-          "sampleapi-M52E7F7-Time",
-          true,
-        );
-        alert("Copied!");
+        await SafManager.getInstance().pickDirectory();
+        const uri = SafManager.getInstance().uri;
+        if (uri) {
+          setSongsPath(uri);
+        }
       } catch (error) {
-        alert("Error copying: " + error);
+        console.error("Error selecting folder:", error);
+        alert("Error selecting folder");
       }
     } else {
       const newSongsPath = await selectSongsDirectory();

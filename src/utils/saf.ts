@@ -29,6 +29,10 @@ export class SafManager {
     return relative ? `/${relative}` : "/";
   }
 
+  async isReady(): Promise<boolean> {
+    return this._uri !== null;
+  }
+
   async init(): Promise<void> {
     try {
       this._uri = (await invoke<string | null>("saf_get_dir")) ?? null;
