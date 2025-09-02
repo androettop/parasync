@@ -11,12 +11,38 @@ export class SafManager {
 
   private constructor() {}
 
+  // --- Directory listeners (for Android SAF) ---
+  // Mirrors the onDownloads/offDownloads pattern: callers can subscribe
+  // to directory changes and will be notified when the user picks a directory.
+  private dirListeners = new Set<(dir: string | null) => void>();
+  // no cached lastDir needed when we only notify on explicit pick
+
+  onDir(cb: (dir: string | null) => void) {
+    this.dirListeners.add(cb);
+    return () => this.offDir(cb);
+  }
+
+  offDir(cb: (dir: string | null) => void) {
+    this.dirListeners.delete(cb);
+  }
+
   async getDir(): Promise<string | null> {
     return await invoke<string | null>("saf_get_dir");
   }
 
-  async pickDirectory() {
-    await invoke<string | null>("saf_select_dir");
+  // Trigger OS directory picker and notify subscribers with the selected dir.
+  // Returns the selected directory (or null).
+  async pickDirectory(): Promise<string | null> {
+    const dir = await invoke<string | null>("saf_select_dir");
+    // notify listeners with the picked dir
+    for (const cb of this.dirListeners) {
+      try {
+        cb(dir);
+      } catch (e) {
+        // ignore listener errors
+      }
+    }
+    return dir;
   }
 
   async copyAppDirToSaf(

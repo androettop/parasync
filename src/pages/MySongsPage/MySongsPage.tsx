@@ -38,6 +38,7 @@ const MySongsPage = () => {
     if (IS_ANDROID) {
       try {
         await SafManager.getInstance().pickDirectory();
+        refresh();
       } catch (error) {
         console.error("Error selecting folder:", error);
       }

@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { IS_ANDROID } from "../utils/mobile";
+import { SafManager } from "../utils/saf";
 import { useLocalStorage } from "./useLocalStorage";
 import useStaticHandler from "./useStaticHandler";
-import { SafManager } from "../utils/saf";
 
 const useSongsPath = (): [string | null, (value: string | null) => void] => {
   const [_songsPath, setSongsPath] = useLocalStorage<string | null>(
@@ -14,16 +14,16 @@ const useSongsPath = (): [string | null, (value: string | null) => void] => {
 
   const initAndroidDir = useStaticHandler(async () => {
     const dir = await SafManager.getInstance().getDir();
-    if (dir) {
-      setSongsPath(dir);
-      setIsAndroidDirSelected(true);
-    }
+    setIsAndroidDirSelected(!!dir);
   });
 
   useEffect(() => {
-    if (IS_ANDROID) {
-      initAndroidDir();
-    }
+    if (!IS_ANDROID) return;
+
+    initAndroidDir();
+    const off = SafManager.getInstance().onDir(initAndroidDir);
+
+    return off;
   }, [initAndroidDir]);
 
   const songsPath = IS_ANDROID
