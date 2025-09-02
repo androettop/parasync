@@ -2,8 +2,9 @@ use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use crossbeam_channel::{unbounded, bounded, Sender, Receiver};
 use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink, Source};
-use std::{fs::File, io::BufReader, path::Path, time::Instant};
+use std::{io::BufReader, time::Instant};
 use serde::Serialize;
+use crate::file_service::FileService;
 
 // ---------- Public API (what Tauri commands will use) ----------
 
@@ -403,9 +404,8 @@ impl MixedSource {
     ) -> Result<Self, String> {
         let mut tracks = Vec::with_capacity(paths.len());
 
-        for p in paths {
-            let path = Path::new(&p);
-            let file = File::open(path).map_err(|e| format!("Could not open {p}: {e}"))?;
+    for p in paths {
+            let file = FileService::open_file(&p).map_err(|e| format!("Could not open {p}: {e}"))?;
             let decoder = Decoder::new(BufReader::new(file))
                 .map_err(|e| format!("Could not decode {p}: {e}"))?;
 

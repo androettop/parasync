@@ -2948,9 +2948,12 @@ dependencies = [
 name = "parasync"
 version = "0.4.4"
 dependencies = [
+ "chrono",
  "cpal",
  "crossbeam-channel",
+ "encoding_rs",
  "futures-util",
+ "jni",
  "libc",
  "once_cell",
  "parking_lot",
@@ -2966,6 +2969,7 @@ dependencies = [
  "tauri-plugin-opener",
  "tauri-plugin-os",
  "tokio",
+ "uuid",
  "zip",
 ]
 
@@ -5292,6 +5296,7 @@ checksum = "3cf4199d1e5d15ddd86a694e4d0dffa9c323ce759fea589f00fef9d81cc1931d"
 dependencies = [
  "getrandom 0.3.3",
  "js-sys",
+ "rand 0.9.2",
  "serde",
  "wasm-bindgen",
 ]

@@ -35,10 +35,14 @@ reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"
 tokio = { version = "1", features = ["rt", "macros", "sync", "fs"] }
 zip = "0.6"
 futures-util = "0.3"
+uuid = { version = "1", features = ["v4", "fast-rng", "serde"] }
+encoding_rs = "0.8"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std", "serde"] }
 
 # Android specific linker configuration
 [target.'cfg(target_os = "android")'.dependencies]
 libc = "0.2"
+jni = "0.21"
 
 # Android specific build configuration
 [target.aarch64-linux-android]

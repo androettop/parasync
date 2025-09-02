@@ -2,6 +2,9 @@ mod audio_service;
 mod audio_commands;
 mod downloads_service;
 mod downloads_commands;
+mod file_service;
+mod songs_service;
+mod songs_commands;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -18,6 +21,13 @@ pub fn run() {
             audio_commands::mute_tracks_by_path,
             downloads_commands::start_song_download,
             downloads_commands::downloads_status,
+            songs_commands::ensure_dir,
+            songs_commands::delete_song,
+            songs_commands::get_song_folder_prefix,
+            songs_commands::get_local_songs,
+            songs_commands::load_song,
+            songs_commands::get_paradiddle_song,
+            songs_commands::get_image_bytes,
         ])
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_dialog::init())
