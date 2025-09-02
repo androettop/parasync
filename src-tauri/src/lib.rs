@@ -2,6 +2,8 @@ mod audio_service;
 mod audio_commands;
 mod downloads_service;
 mod downloads_commands;
+mod saf_service;
+mod saf_commands;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -18,6 +20,9 @@ pub fn run() {
             audio_commands::mute_tracks_by_path,
             downloads_commands::start_song_download,
             downloads_commands::downloads_status,
+            saf_commands::saf_select_dir,
+            saf_commands::saf_get_dir,
+            saf_commands::saf_copy_appdir_to_saf,
         ])
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_dialog::init())

@@ -39,6 +39,8 @@ futures-util = "0.3"
 # Android specific linker configuration
 [target.'cfg(target_os = "android")'.dependencies]
 libc = "0.2"
+jni = { version = "0.21", default-features = false }
+ndk-context = "0.1"
 
 # Android specific build configuration
 [target.aarch64-linux-android]

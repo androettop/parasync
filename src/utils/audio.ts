@@ -1,4 +1,10 @@
+import { invoke } from "@tauri-apps/api/core";
 import { Loadable } from "excalibur";
+
+export type AudioStatus = {
+  position_secs: number;
+  is_playing: boolean;
+};
 
 export class SongAudioManager implements Loadable<{}> {
   private _position = 0;
@@ -50,10 +56,10 @@ export class SongAudioManager implements Loadable<{}> {
   async load() {
     this._isLoaded = false;
     const allPaths = [...this.songTrackPaths, ...this.drumsTrackPaths];
-    await window.__TAURI_INTERNALS__.invoke("load_audio", {
+    await invoke("load_audio", {
       paths: allPaths,
     } as any);
-    const st = await window.__TAURI_INTERNALS__.invoke("audio_status");
+    const st: AudioStatus = await invoke("audio_status");
     this._position = st.position_secs ?? 0;
     this._isLoaded = true;
     return {};
@@ -64,31 +70,31 @@ export class SongAudioManager implements Loadable<{}> {
   }
 
   async play() {
-    await window.__TAURI_INTERNALS__.invoke("play_audio");
+    await invoke("play_audio");
     clearInterval(this._interval);
     this.isPlaying = true;
   }
 
   async pause() {
-    await window.__TAURI_INTERNALS__.invoke("pause_audio");
+    await invoke("pause_audio");
     this.isPlaying = false;
-    const st = await window.__TAURI_INTERNALS__.invoke("audio_status");
+    const st: AudioStatus = await invoke("audio_status");
     this._position = st.position_secs ?? this._position;
   }
 
   async stop() {
-    await window.__TAURI_INTERNALS__.invoke("stop_audio");
+    await invoke("stop_audio");
     this.isPlaying = false;
     this._position = 0;
   }
 
   async dispose() {
     clearInterval(this._interval);
-    await window.__TAURI_INTERNALS__.invoke("dispose_audio");
+    await invoke("dispose_audio");
   }
 
   async toggleDrums(mute: boolean) {
-    await window.__TAURI_INTERNALS__.invoke("mute_tracks_by_path", {
+    await invoke("mute_tracks_by_path", {
       paths: this.drumsTrackPaths,
       muted: mute,
     } as any);
@@ -96,7 +102,7 @@ export class SongAudioManager implements Loadable<{}> {
   }
 
   async refreshStatus() {
-    const st = await window.__TAURI_INTERNALS__.invoke("audio_status");
+    const st: AudioStatus = await invoke("audio_status");
     this._position = st.position_secs ?? this._position;
   }
 

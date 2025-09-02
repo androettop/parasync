@@ -18,6 +18,7 @@ import { Difficulty, LocalSong } from "../../types/songs";
 import { deleteSong, selectSongsDirectory } from "../../utils/fs";
 import { CARD_SIZE } from "../../utils/songs";
 import { platform } from "@tauri-apps/plugin-os";
+import { invoke } from "@tauri-apps/api/core";
 
 const MySongsPage = () => {
   const [songsPath, setSongsPath] = useSongsPath();
@@ -32,15 +33,19 @@ const MySongsPage = () => {
     const playerUrl = `/play?file=${encodeURIComponent(fileName)}`;
     navigate(playerUrl);
   };
+  const isAndroid = platform() === "android";
 
   const handleSelectSongsFolder = async () => {
-    const newSongsPath = await selectSongsDirectory();
-    if (newSongsPath) {
-      setSongsPath(newSongsPath);
+    if (isAndroid) {
+      const data = await invoke("saf_get_dir");
+      alert(JSON.stringify(data));
+    } else {
+      const newSongsPath = await selectSongsDirectory();
+      if (newSongsPath) {
+        setSongsPath(newSongsPath);
+      }
     }
   };
-
-  const isAndroid = platform() === "android";
 
   const handleToggleSong = (baseFileName: string) => {
     setSelectedSongs((prev) =>
@@ -97,16 +102,15 @@ const MySongsPage = () => {
               My Songs
             </Typography>
             <Box>
-              {!isAndroid && (
-                <Button
-                  variant="outlined"
-                  color="primary"
-                  startIcon={<FolderOpenIcon />}
-                  onClick={handleSelectSongsFolder}
-                >
-                  Choose Songs Folder
-                </Button>
-              )}
+              <Button
+                variant="outlined"
+                color="primary"
+                startIcon={<FolderOpenIcon />}
+                onClick={handleSelectSongsFolder}
+              >
+                Choose Songs Folder
+              </Button>
+
               {songsCount > 0 && (
                 <Button
                   variant="outlined"

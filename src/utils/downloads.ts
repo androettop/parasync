@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 import { Song } from "../types/songs";
 
 // Utility function to format bytes
@@ -55,7 +56,7 @@ export class DownloadManager {
     this.activeSongs.set(key, song);
 
     // if it already exists in backend, it will return an error; we handle it above
-    await (window as any).__TAURI_INTERNALS__.invoke("start_song_download", {
+    await invoke("start_song_download", {
       key,
       downloadUrl: song.downloadUrl,
       destRoot,
@@ -119,9 +120,7 @@ export class DownloadManager {
   private startPolling() {
     const tick = async () => {
       try {
-        const list: DownloadStatus[] = await (
-          window as any
-        ).__TAURI_INTERNALS__.invoke("downloads_status");
+        const list: DownloadStatus[] = await invoke("downloads_status");
         const map: StatusMap = {};
         for (const st of list) map[st.key] = st;
 
