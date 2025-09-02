@@ -31,7 +31,7 @@ export const processNotesAndInstruments = (
   const centerX = GAME_CONFIG.highwayWidth / 2;
 
   const computePosX = (instrumentClass: string) => {
-    if (["BP_Kick_C", "bpm"].includes(instrumentClass)) return centerX;
+    if (["BP_Kick_C", "bpm", "bpmi"].includes(instrumentClass)) return centerX;
     const instrumentIndex = instruments.indexOf(instrumentClass);
     if (instrumentIndex < 0 || instruments.length === 0) return centerX;
     return (
@@ -87,7 +87,9 @@ export const processNotesAndInstruments = (
 
       for (let m = 0; m < beatsToCreate; m++) {
         const t = sectionStart + m * period;
+        const halfPeriodBpmTime = sectionStart + (m + 0.5) * period;
         pushNote(t, "bpm");
+        pushNote(halfPeriodBpmTime, "bpmi");
       }
     }
   }
@@ -128,6 +130,9 @@ export const createNoteActor = (note: ProcessedNote) => {
       break;
     case "bpm":
       noteActor = new BaseNote(note, Resources.NoteBpm, 4);
+      break;
+    case "bpmi":
+      noteActor = new BaseNote(note, Resources.NoteBpmI, 4);
       break;
     default:
       noteActor = new BaseNote(note, Resources.NoteRectBase);

@@ -6,6 +6,7 @@ import noteCirclePurple from "../assets/NoteCirclePurple.png";
 import noteCircleYellow from "../assets/NoteCircleYellow.png";
 import noteKick from "../assets/NoteKick.png";
 import noteBpm from "../assets/NoteBpm.png";
+import noteBpmI from "../assets/NoteBpmI.png";
 import noteRectBase from "../assets/NoteRectBase.png";
 import noteRectCyan from "../assets/NoteRectCyan.png";
 import noteRectGreen from "../assets/NoteRectGreen.png";
@@ -68,6 +69,7 @@ const noteRectRedImg = new ImageSource(noteRectRed);
 const noteRectBaseImg = new ImageSource(noteRectBase);
 const noteKickImg = new ImageSource(noteKick);
 const noteBpmImg = new ImageSource(noteBpm);
+const noteBpmIImg = new ImageSource(noteBpmI);
 
 const dividerNoteCircleCyanImg = new ImageSource(dividerNoteCircleCyan);
 const dividerNoteCircleOrangeImg = new ImageSource(dividerNoteCircleOrange);
@@ -113,6 +115,7 @@ export const Resources = {
   NoteRectBase: noteRectBaseImg,
   NoteKick: noteKickImg,
   NoteBpm: noteBpmImg,
+  NoteBpmI: noteBpmIImg,
 
   DividerNoteCircleCyan: dividerNoteCircleCyanImg,
   DividerNoteCircleOrange: dividerNoteCircleOrangeImg,
