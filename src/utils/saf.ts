@@ -57,4 +57,25 @@ export class SafManager {
       overwrite,
     });
   }
+
+  // --- NEW: SAF I/O ---
+  async readDir(
+    path: string,
+  ): Promise<{ name: string; isFile: boolean; isDirectory: boolean }[]> {
+    const json = await invoke<string>("saf_read_dir", { path });
+    return JSON.parse(json || "[]");
+  }
+
+  async readTextFile(path: string): Promise<string> {
+    return await invoke<string>("saf_read_text_file", { path });
+  }
+
+  async readFile(path: string): Promise<Uint8Array> {
+    const bytes = await invoke<number[]>("saf_read_file", { path });
+    return new Uint8Array(bytes);
+  }
+
+  async remove(path: string, recursive = false): Promise<boolean> {
+    return await invoke<boolean>("saf_remove", { path, recursive });
+  }
 }

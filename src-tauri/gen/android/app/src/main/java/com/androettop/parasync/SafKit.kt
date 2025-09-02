@@ -7,8 +7,7 @@ import android.net.Uri
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.documentfile.provider.DocumentFile
-import java.io.File
-import java.io.FileInputStream
+import java.io.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.io.DEFAULT_BUFFER_SIZE
@@ -158,5 +157,109 @@ class SafKit(private val activity: Activity) {
         } ?: return false
 
         return true
+    }
+
+    // ---------- NEW: Helpers for I/O ----------
+
+    private fun getRoot(): DocumentFile? {
+        val tree = getPersistedSongsUri(activity) ?: return null
+        return DocumentFile.fromTreeUri(activity, Uri.parse(tree))
+    }
+
+    private fun normalize(relPath: String): List<String> = relPath.trim('/').split('/').filter { it.isNotEmpty() }
+
+    private fun resolve(relPath: String): DocumentFile? {
+        var cur = getRoot() ?: return null
+        val parts = normalize(relPath)
+        if (parts.isEmpty()) return cur
+        for (seg in parts) {
+            cur = cur.findFile(seg) ?: return null
+        }
+        return cur
+    }
+
+    private fun resolveParentAndName(relPath: String): Pair<DocumentFile, String>? {
+        val root = getRoot() ?: return null
+        val parts = normalize(relPath)
+        if (parts.isEmpty()) return null
+        val name = parts.last()
+        val parent = parts.dropLast(1).fold(root) { acc, seg ->
+            acc.findFile(seg) ?: return null
+        }
+        return parent to name
+    }
+
+    private fun jsonEscape(s: String): String = s.replace("\\", "\\\\").replace("\"", "\\\"")
+
+    // ---------- NEW: Public I/O API ----------
+
+    fun listDirJson(relPath: String): String? {
+        val dir = resolve(relPath) ?: return "[]"
+        if (!dir.isDirectory) return "[]"
+        val files = dir.listFiles()
+        val sb = StringBuilder("[")
+        files.forEachIndexed { idx, f ->
+            if (idx > 0) sb.append(',')
+            val name = f.name ?: ""
+            sb.append("{\"name\":\"")
+                .append(jsonEscape(name))
+                .append("\",\"isFile\":")
+                .append(if (f.isFile) "true" else "false")
+                .append(",\"isDirectory\":")
+                .append(if (f.isDirectory) "true" else "false")
+                .append("}")
+        }
+        sb.append(']')
+        return sb.toString()
+    }
+
+    fun readTextFile(relPath: String): String? {
+        val file = resolve(relPath) ?: return null
+        if (!file.isFile) return null
+        activity.contentResolver.openInputStream(file.uri)?.use { ins ->
+            return ins.bufferedReader(Charsets.UTF_8).readText()
+        }
+        return null
+    }
+
+    fun readFile(relPath: String): ByteArray? {
+        val file = resolve(relPath) ?: return null
+        if (!file.isFile) return null
+        activity.contentResolver.openInputStream(file.uri)?.use { ins ->
+            val bos = ByteArrayOutputStream()
+            val buf = ByteArray(DEFAULT_BUFFER_SIZE)
+            while (true) {
+                val r = ins.read(buf)
+                if (r <= 0) break
+                bos.write(buf, 0, r)
+            }
+            return bos.toByteArray()
+        }
+        return null
+    }
+
+    fun removePath(relPath: String, recursive: Boolean): Boolean {
+        val target = resolve(relPath) ?: return false
+        return if (target.isFile) {
+            target.delete()
+        } else {
+            if (!recursive) {
+                target.delete()
+            } else {
+                deleteRecursively(target)
+            }
+        }
+    }
+
+    private fun deleteRecursively(dir: DocumentFile): Boolean {
+        if (dir.isFile) return dir.delete()
+        dir.listFiles().forEach { child ->
+            if (child.isDirectory) {
+                if (!deleteRecursively(child)) return false
+            } else {
+                if (!child.delete()) return false
+            }
+        }
+        return dir.delete()
     }
 }

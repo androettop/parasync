@@ -96,6 +96,139 @@ impl SafService {
         #[cfg(not(target_os = "android"))]
         { Ok(false) }
     }
+
+    // --- NEW: SAF file operations (Android only) ---
+
+    /// List a directory under the persisted SAF root. `path` is a relative path from the root.
+    /// Returns a JSON array string of entries with fields: name, isFile, isDirectory
+    pub fn read_dir(&self, path: String) -> Result<String, String> {
+        #[cfg(target_os = "android")]
+        {
+            android_sys::with_env_activity(|env, activity| {
+                use jni::objects::JValue;
+                let j_path = env.new_string(path).map_err(|e| e.to_string())?;
+                let jres = env
+                    .call_method(
+                        activity,
+                        "safListDir",
+                        "(Ljava/lang/String;)Ljava/lang/String;",
+                        &[JValue::from(&j_path)],
+                    )
+                    .map_err(|e| format!("JNI call safListDir: {e:?}"))?
+                    .l()
+                    .map_err(|e| format!("{e:?}"))?;
+                if jres.is_null() {
+                    Ok("[]".to_string())
+                } else {
+                    use jni::objects::JString;
+                    let s: String = env
+                        .get_string(&JString::from(jres))
+                        .map_err(|e| format!("JNI get_string: {e:?}"))?
+                        .into();
+                    Ok(s)
+                }
+            })
+        }
+        #[cfg(not(target_os = "android"))]
+        {
+            Ok("[]".to_string())
+        }
+    }
+
+    /// Read a UTF-8 text file under the SAF root.
+    pub fn read_text_file(&self, path: String) -> Result<String, String> {
+        #[cfg(target_os = "android")]
+        {
+            android_sys::with_env_activity(|env, activity| {
+                use jni::objects::JValue;
+                let j_path = env.new_string(path).map_err(|e| e.to_string())?;
+                let jres = env
+                    .call_method(
+                        activity,
+                        "safReadTextFile",
+                        "(Ljava/lang/String;)Ljava/lang/String;",
+                        &[JValue::from(&j_path)],
+                    )
+                    .map_err(|e| format!("JNI call safReadTextFile: {e:?}"))?
+                    .l()
+                    .map_err(|e| format!("{e:?}"))?;
+                if jres.is_null() {
+                    Err("File not found".into())
+                } else {
+                    use jni::objects::JString;
+                    let s: String = env
+                        .get_string(&JString::from(jres))
+                        .map_err(|e| format!("JNI get_string: {e:?}"))?
+                        .into();
+                    Ok(s)
+                }
+            })
+        }
+        #[cfg(not(target_os = "android"))]
+        {
+            Err("Not implemented on this platform".into())
+        }
+    }
+
+    /// Read raw bytes from a file under the SAF root.
+    pub fn read_file(&self, path: String) -> Result<Vec<u8>, String> {
+        #[cfg(target_os = "android")]
+        {
+            android_sys::with_env_activity(|env, activity| {
+                use jni::objects::{JByteArray, JValue};
+                let j_path = env.new_string(path).map_err(|e| e.to_string())?;
+                let arr_obj = env
+                    .call_method(
+                        activity,
+                        "safReadFile",
+                        "(Ljava/lang/String;)[B",
+                        &[JValue::from(&j_path)],
+                    )
+                    .map_err(|e| format!("JNI call safReadFile: {e:?}"))?
+                    .l()
+                    .map_err(|e| format!("{e:?}"))?;
+                if arr_obj.is_null() {
+                    Err("File not found".into())
+                } else {
+                    let jarr = JByteArray::from(arr_obj);
+                    let data = env
+                        .convert_byte_array(&jarr)
+                        .map_err(|e| format!("convert_byte_array: {e:?}"))?;
+                    Ok(data)
+                }
+            })
+        }
+        #[cfg(not(target_os = "android"))]
+        {
+            Err("Not implemented on this platform".into())
+        }
+    }
+
+    /// Remove a file or directory under the SAF root. If directory and recursive=true, delete its contents.
+    pub fn remove(&self, path: String, recursive: bool) -> Result<bool, String> {
+        #[cfg(target_os = "android")]
+        {
+            android_sys::with_env_activity(|env, activity| {
+                use jni::objects::JValue;
+                let j_path = env.new_string(path).map_err(|e| e.to_string())?;
+                let ok = env
+                    .call_method(
+                        activity,
+                        "safRemove",
+                        "(Ljava/lang/String;Z)Z",
+                        &[JValue::from(&j_path), JValue::from(recursive)],
+                    )
+                    .map_err(|e| format!("JNI call safRemove: {e:?}"))?
+                    .z()
+                    .map_err(|e| format!("{e:?}"))?;
+                Ok(ok)
+            })
+        }
+        #[cfg(not(target_os = "android"))]
+        {
+            Ok(false)
+        }
+    }
 }
 
 #[cfg(target_os = "android")]

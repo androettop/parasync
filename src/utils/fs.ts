@@ -3,6 +3,8 @@ import { readDir, readTextFile, readFile, remove } from "@tauri-apps/plugin-fs";
 import { Difficulty, LocalSong, ParadiddleSong, Song } from "../types/songs";
 import { v4 as uuid } from "uuid";
 import * as path from "@tauri-apps/api/path";
+import { IS_ANDROID } from "./mobile";
+import { SafManager } from "./saf";
 
 export const selectSongsDirectory = async () => {
   const file = await open({
@@ -13,8 +15,15 @@ export const selectSongsDirectory = async () => {
 };
 
 export const getImageUrl = async (imagePath: string): Promise<string> => {
-  const image = await readFile(imagePath);
-  const blob = new Blob([image], { type: "image/png" });
+  const image = IS_ANDROID
+    ? await SafManager.getInstance().readFile(imagePath)
+    : await readFile(imagePath);
+  // Ensure we pass an ArrayBuffer slice, not a typed array view, to satisfy TS types
+  const buf = (image as Uint8Array).buffer.slice(
+    (image as Uint8Array).byteOffset,
+    (image as Uint8Array).byteOffset + (image as Uint8Array).byteLength,
+  ) as ArrayBuffer;
+  const blob = new Blob([buf], { type: "image/png" });
   const url = URL.createObjectURL(blob);
   return url;
 };
@@ -24,7 +33,9 @@ export const getParadiddleSong = async (
 ): Promise<ParadiddleSong> => {
   try {
     // Read as bytes first to detect encoding
-    const fileBytes = await readFile(paradiddleSongPath);
+    const fileBytes = IS_ANDROID
+      ? await SafManager.getInstance().readFile(paradiddleSongPath)
+      : await readFile(paradiddleSongPath);
 
     let jsonData: string;
 
@@ -89,7 +100,9 @@ export const getParadiddleSong = async (
 
     // Fallback: try with original readTextFile
     try {
-      const jsonData = await readTextFile(paradiddleSongPath);
+      const jsonData = IS_ANDROID
+        ? await SafManager.getInstance().readTextFile(paradiddleSongPath)
+        : await readTextFile(paradiddleSongPath);
       const cleanedData = jsonData.trim();
       const paradiddleSong: ParadiddleSong = JSON.parse(cleanedData);
       return paradiddleSong;
@@ -108,7 +121,9 @@ export const loadSong = async (
   songDirPath: string,
 ): Promise<LocalSong | null> => {
   const songPath = `${songsPath}/${songDirPath}`;
-  const songDir = await readDir(songPath);
+  const songDir = IS_ANDROID
+    ? await SafManager.getInstance().readDir(songPath)
+    : await readDir(songPath);
 
   const difficulties: Difficulty[] = [];
   let song: Song | null = null;
@@ -167,7 +182,10 @@ export const loadSong = async (
 export const getLocalSongs = async (
   songsFolder: string,
 ): Promise<LocalSong[]> => {
-  const entries = await readDir(songsFolder);
+  const entries = IS_ANDROID
+    ? await SafManager.getInstance().readDir(songsFolder)
+    : await readDir(songsFolder);
+
   const songs: LocalSong[] = [];
   for (const entry of entries) {
     if (entry.isDirectory && entry.name !== ".tmp") {
@@ -199,9 +217,11 @@ export const removeAndroidTmpFolder = async (): Promise<void> => {
 export const deleteSong = async (songsPath: string): Promise<void> => {
   // removes the song folder from the file system
   try {
-    await remove(songsPath, {
-      recursive: true,
-    });
+    if (IS_ANDROID) {
+      await SafManager.getInstance().remove(songsPath, true);
+    } else {
+      await remove(songsPath, { recursive: true });
+    }
   } catch (error) {
     console.error(`Error deleting song folder ${songsPath}:`, error);
     throw error;

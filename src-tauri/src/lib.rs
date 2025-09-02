@@ -23,6 +23,11 @@ pub fn run() {
             saf_commands::saf_select_dir,
             saf_commands::saf_get_dir,
             saf_commands::saf_copy_appdir_to_saf,
+            // NEW SAF FS commands
+            saf_commands::saf_read_dir,
+            saf_commands::saf_read_text_file,
+            saf_commands::saf_read_file,
+            saf_commands::saf_remove,
         ])
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_dialog::init())

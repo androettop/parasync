@@ -22,3 +22,25 @@ pub async fn saf_copy_appdir_to_saf(
     .await
     .map_err(|e| format!("Join error: {e}"))?
 }
+
+// --- NEW: SAF file operations ---
+
+#[tauri::command]
+pub fn saf_read_dir(path: String) -> Result<String, String> {
+    SAF.read_dir(path)
+}
+
+#[tauri::command]
+pub fn saf_read_text_file(path: String) -> Result<String, String> {
+    SAF.read_text_file(path)
+}
+
+#[tauri::command]
+pub fn saf_read_file(path: String) -> Result<Vec<u8>, String> {
+    SAF.read_file(path)
+}
+
+#[tauri::command]
+pub fn saf_remove(path: String, recursive: bool) -> Result<bool, String> {
+    SAF.remove(path, recursive)
+}

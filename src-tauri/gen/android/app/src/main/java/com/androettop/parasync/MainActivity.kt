@@ -31,4 +31,14 @@ class MainActivity : TauriActivity() {
     fun copyDirFromAppToSongs(appDirAbs: String, destFolderName: String, overwrite: Boolean): Boolean {
         return safKit.copyDirFromAppToSongs(appDirAbs, destFolderName, overwrite)
     }
+
+    // --- NEW: SAF I/O exposed for Rust JNI ---
+
+    fun safListDir(relPath: String): String? = safKit.listDirJson(relPath)
+
+    fun safReadTextFile(relPath: String): String? = safKit.readTextFile(relPath)
+
+    fun safReadFile(relPath: String): ByteArray? = safKit.readFile(relPath)
+
+    fun safRemove(relPath: String, recursive: Boolean): Boolean = safKit.removePath(relPath, recursive)
 }
