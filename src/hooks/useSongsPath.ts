@@ -13,7 +13,7 @@ const useSongsPath = (): [string | null, (value: string | null) => void] => {
 
   useEffect(() => {
     (async () => {
-      const appDir = await path.appLocalDataDir();
+      const appDir = await path.join(await path.homeDir(), "Paradiddle/Songs");
       setAndroidSongsPath(appDir);
     })();
   }, []);

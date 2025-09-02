@@ -18,7 +18,8 @@ import { Difficulty, LocalSong } from "../../types/songs";
 import { deleteSong, selectSongsDirectory } from "../../utils/fs";
 import { CARD_SIZE } from "../../utils/songs";
 import { platform } from "@tauri-apps/plugin-os";
-import { invoke } from "@tauri-apps/api/core";
+import { SafManager } from "../../utils/saf";
+import * as path from "@tauri-apps/api/path";
 
 const MySongsPage = () => {
   const [songsPath, setSongsPath] = useSongsPath();
@@ -37,8 +38,20 @@ const MySongsPage = () => {
 
   const handleSelectSongsFolder = async () => {
     if (isAndroid) {
-      const data = await invoke("saf_get_dir");
-      alert(JSON.stringify(data));
+      if (!songsPath) return;
+
+      await SafManager.getInstance().pickDirectory();
+      alert(SafManager.getInstance().songsPath);
+      try {
+        await SafManager.getInstance().copyAppDirToSaf(
+          await path.join(songsPath, "sampleapi-M52E7F7-Time"),
+          "sampleapi-M52E7F7-Time",
+          true,
+        );
+        alert("Copied!");
+      } catch (error) {
+        alert("Error copying: " + error);
+      }
     } else {
       const newSongsPath = await selectSongsDirectory();
       if (newSongsPath) {
