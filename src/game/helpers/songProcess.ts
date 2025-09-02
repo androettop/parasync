@@ -62,10 +62,11 @@ export const processNotesAndInstruments = (
   }
 
   // 2) Expand bpmEvents to "bpm" notes (centered, no lane)
+  // Simple approach: compute how many beats fit into the section and
+  // create all of them except the last one to avoid duplicates at boundaries.
   if (bpmEvents?.length) {
     const sorted = [...bpmEvents].sort((a, b) => a.time - b.time);
     const songEnd = endTime;
-    const EPS = 1e-6;
 
     for (let i = 0; i < sorted.length; i++) {
       const cur = sorted[i];
@@ -77,8 +78,15 @@ export const processNotesAndInstruments = (
       if (cur.bpm <= 0) continue;
 
       const period = 60 / cur.bpm;
+      const length = sectionEnd - sectionStart;
 
-      for (let t = sectionStart; t < sectionEnd - EPS; t += period) {
+      // total beats that would fit starting at sectionStart (ceiling because
+      // a partial last beat still counts as an occurrence at sectionStart + k*period)
+      const totalBeats = Math.ceil(length / period);
+      const beatsToCreate = Math.max(0, totalBeats - 1); // omit the last
+
+      for (let m = 0; m < beatsToCreate; m++) {
+        const t = sectionStart + m * period;
         pushNote(t, "bpm");
       }
     }
