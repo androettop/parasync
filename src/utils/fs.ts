@@ -1,11 +1,5 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import {
-  readDir,
-  readTextFile,
-  readFile,
-  mkdir,
-  remove,
-} from "@tauri-apps/plugin-fs";
+import { readDir, readTextFile, readFile, remove } from "@tauri-apps/plugin-fs";
 import { Difficulty, LocalSong, ParadiddleSong, Song } from "../types/songs";
 import { v4 as uuid } from "uuid";
 import * as path from "@tauri-apps/api/path";
@@ -184,16 +178,6 @@ export const getLocalSongs = async (
     }
   }
   return songs;
-};
-
-export const ensureDir = async (path: string): Promise<void> => {
-  try {
-    await mkdir(path, { recursive: true });
-  } catch (error: any) {
-    if (error.code !== "EEXIST") {
-      throw error;
-    }
-  }
 };
 
 export const getSongFolderPrefix = (
