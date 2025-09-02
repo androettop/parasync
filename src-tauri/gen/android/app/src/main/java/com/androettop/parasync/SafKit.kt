@@ -30,22 +30,23 @@ class SafKit(private val activity: Activity) {
     fun register(activity: Activity) {
         openTreeLauncher = (activity as? androidx.activity.ComponentActivity)
             ?.registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
+                android.util.Log.d("SafKit", "onResult uri=" + (uri?.toString() ?: "null"))
                 if (uri != null) {
+                    lastResultUri = uri.toString() // ⚠️ setear ANTES de persistir
                     try {
-                        val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                                Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
-                                Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+                        val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                         activity.contentResolver.takePersistableUriPermission(uri, flags)
-                        // persistir
                         activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                             .edit().putString(KEY_TREE_URI, uri.toString()).apply()
-                        lastResultUri = uri.toString()
+                        android.util.Log.d("SafKit", "persist OK")
                     } catch (e: Exception) {
-                        lastResultUri = null
+                        android.util.Log.w("SafKit", "persist FAIL: " + e.message)
+                        // IMPORTANTE: NO borres lastResultUri aquí; así el bloqueante puede devolverla.
                     }
                 } else {
                     lastResultUri = null
                 }
+                android.util.Log.d("SafKit", "countDown latch")
                 latch?.countDown()
             }
     }

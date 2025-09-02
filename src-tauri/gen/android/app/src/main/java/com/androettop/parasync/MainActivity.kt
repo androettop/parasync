@@ -7,7 +7,8 @@ class MainActivity : TauriActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         safKit = SafKit(this)
-        safKit.register(this) // registra launcher SAF
+        safKit.register(this)
+        android.util.Log.d("SafKit", "register() done")
     }
 
     // --- Métodos llamados desde Rust (JNI) ---
