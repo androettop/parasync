@@ -23,6 +23,7 @@ pub fn run() {
             saf_commands::saf_select_dir,
             saf_commands::saf_get_dir,
             saf_commands::saf_copy_appdir_to_saf,
+            saf_commands::saf_copy_saf_to_appdir,
             // NEW SAF FS commands
             saf_commands::saf_read_dir,
             saf_commands::saf_read_text_file,

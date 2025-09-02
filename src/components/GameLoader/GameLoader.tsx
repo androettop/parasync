@@ -26,6 +26,7 @@ const GameLoader = ({ songDirPath, song, onExit }: GameLoaderProps) => {
 
     return () => {
       if (engine) {
+        engine.releaseResources();
         engine.dispose();
         engineRef.current = null;
       }

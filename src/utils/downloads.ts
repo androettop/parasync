@@ -96,7 +96,7 @@ export class DownloadManager {
               await SafManager.getInstance().copyAppDirToSaf(destRoot, "");
               await removeAndroidTmpFolder(tmpUuid);
             } catch (e) {
-              alert(
+              console.log(
                 "Error copying the downloaded song, check the app file permissions" +
                   e,
               );

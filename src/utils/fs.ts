@@ -1,5 +1,12 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { readDir, readTextFile, readFile, remove } from "@tauri-apps/plugin-fs";
+import {
+  readDir,
+  readTextFile,
+  readFile,
+  remove,
+  exists,
+  mkdir,
+} from "@tauri-apps/plugin-fs";
 import { Difficulty, LocalSong, ParadiddleSong, Song } from "../types/songs";
 import { v4 as uuid } from "uuid";
 import * as path from "@tauri-apps/api/path";
@@ -216,6 +223,49 @@ export const removeAndroidTmpFolder = async (
 ): Promise<void> => {
   const tmpDir = await getAndroidTmpFolder(subDir);
   await remove(tmpDir, { recursive: true });
+};
+
+export const copyTracksToAndroidCache = async (
+  tracks: string[],
+  cacheKey: string,
+): Promise<string[]> => {
+  const cacheDir = await path.join(
+    await path.appLocalDataDir(),
+    "playerCache",
+    cacheKey,
+  );
+
+  if (!(await exists(cacheDir))) {
+    mkdir(cacheDir, { recursive: true });
+  }
+
+  const copyPromises = tracks.map(async (track) => {
+    const destPath = await path.join(cacheDir, track);
+    try {
+      await SafManager.getInstance().copySafToAppDir(
+        track,
+        destPath.substring(0, destPath.lastIndexOf("/") + 1),
+      );
+    } catch (e) {
+      console.log(e);
+    }
+    return destPath;
+  });
+
+  return Promise.all(copyPromises);
+};
+
+export const clearPlayerCache = async (cacheKey: string) => {
+  const cacheDir = await path.join(
+    await path.appLocalDataDir(),
+    "playerCache",
+    cacheKey,
+  );
+  try {
+    await remove(cacheDir, { recursive: true });
+  } catch (error) {
+    console.log(`Error clearing player cache for ${cacheKey}:` + error);
+  }
 };
 
 export const deleteSong = async (songsPath: string): Promise<void> => {

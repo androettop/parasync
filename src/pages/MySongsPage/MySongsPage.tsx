@@ -38,13 +38,8 @@ const MySongsPage = () => {
     if (IS_ANDROID) {
       try {
         await SafManager.getInstance().pickDirectory();
-        const uri = SafManager.getInstance().uri;
-        if (uri) {
-          setSongsPath(uri);
-        }
       } catch (error) {
         console.error("Error selecting folder:", error);
-        alert("Error selecting folder");
       }
     } else {
       const newSongsPath = await selectSongsDirectory();

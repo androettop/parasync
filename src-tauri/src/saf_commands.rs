@@ -23,6 +23,19 @@ pub async fn saf_copy_appdir_to_saf(
     .map_err(|e| format!("Join error: {e}"))?
 }
 
+#[tauri::command]
+pub async fn saf_copy_saf_to_appdir(
+    src_folder_rel: String,
+    dest_app_dir_abs: String,
+    overwrite: bool,
+) -> Result<bool, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        SAF.copy_saf_to_appdir(src_folder_rel, dest_app_dir_abs, overwrite)
+    })
+    .await
+    .map_err(|e| format!("Join error: {e}"))?
+}
+
 // --- NEW: SAF file operations ---
 
 #[tauri::command]

@@ -31,6 +31,18 @@ export class SafManager {
     });
   }
 
+  async copySafToAppDir(
+    srcFolderRel: string,
+    destAppDirAbs: string,
+    overwrite = true,
+  ): Promise<boolean> {
+    return await invoke("saf_copy_saf_to_appdir", {
+      srcFolderRel,
+      destAppDirAbs,
+      overwrite,
+    });
+  }
+
   // --- NEW: SAF I/O ---
   async readDir(
     path: string,

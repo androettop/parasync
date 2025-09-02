@@ -1,5 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import { Loadable } from "excalibur";
+import { clearPlayerCache, copyTracksToAndroidCache } from "./fs";
+import { IS_ANDROID } from "./mobile";
+import { v4 as uuid } from "uuid";
 
 export type AudioStatus = {
   position_secs: number;
@@ -11,9 +14,11 @@ export class SongAudioManager implements Loadable<{}> {
   private _duration;
   private _isPlaying = false;
   private _isLoaded = false;
-  private readonly songTrackPaths: string[];
-  private readonly drumsTrackPaths: string[];
+  private songTrackPaths: string[];
+  private drumsTrackPaths: string[];
   private _drumsMuted = false;
+  private _cacheKey = uuid();
+  private _isDisposed = false;
 
   private _interval: number = 0;
 
@@ -54,8 +59,30 @@ export class SongAudioManager implements Loadable<{}> {
   }
 
   async load() {
+    // god forgive me for this
+    await new Promise((r) => setTimeout(r, 1000));
+    if (this._isDisposed) {
+      return {};
+    }
+
     this._isLoaded = false;
-    const allPaths = [...this.songTrackPaths, ...this.drumsTrackPaths];
+    let allPaths = [...this.songTrackPaths, ...this.drumsTrackPaths];
+
+    if (IS_ANDROID) {
+      try {
+        this.songTrackPaths = await copyTracksToAndroidCache(
+          this.songTrackPaths,
+          this._cacheKey,
+        );
+        this.drumsTrackPaths = await copyTracksToAndroidCache(
+          this.drumsTrackPaths,
+          this._cacheKey,
+        );
+        allPaths = [...this.songTrackPaths, ...this.drumsTrackPaths];
+      } catch (error) {
+        console.log("Error copying tracks to Android cache: " + error);
+      }
+    }
     await invoke("load_audio", {
       paths: allPaths,
     } as any);
@@ -70,9 +97,13 @@ export class SongAudioManager implements Loadable<{}> {
   }
 
   async play() {
-    await invoke("play_audio");
-    clearInterval(this._interval);
-    this.isPlaying = true;
+    try {
+      await invoke("play_audio");
+      clearInterval(this._interval);
+      this.isPlaying = true;
+    } catch (e) {
+      console.log("Error playing audio: " + e);
+    }
   }
 
   async pause() {
@@ -89,8 +120,10 @@ export class SongAudioManager implements Loadable<{}> {
   }
 
   async dispose() {
+    this._isDisposed = true;
     clearInterval(this._interval);
     await invoke("dispose_audio");
+    await clearPlayerCache(this._cacheKey);
   }
 
   async toggleDrums(mute: boolean) {

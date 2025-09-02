@@ -97,6 +97,42 @@ impl SafService {
         { Ok(false) }
     }
 
+    pub fn copy_saf_to_appdir(
+        &self,
+        src_folder_rel: String,
+        dest_app_dir_abs: String,
+        overwrite: bool,
+    ) -> Result<bool, String> {
+        #[cfg(target_os = "android")]
+        {
+            android_sys::with_env_activity(|env, activity| {
+                use jni::objects::JValue;
+
+                let j_src = env.new_string(src_folder_rel).map_err(|e| e.to_string())?;
+                let j_dst = env.new_string(dest_app_dir_abs).map_err(|e| e.to_string())?;
+
+                let ok = env
+                    .call_method(
+                        activity,
+                        "copyDirFromSongsToApp",
+                        "(Ljava/lang/String;Ljava/lang/String;Z)Z",
+                        &[
+                            JValue::from(&j_src),
+                            JValue::from(&j_dst),
+                            JValue::from(overwrite),
+                        ],
+                    )
+                    .map_err(|e| format!("JNI call copyDirFromSongsToApp: {e:?}"))?
+                    .z()
+                    .map_err(|e| format!("{e:?}"))?;
+
+                Ok(ok)
+            })
+        }
+        #[cfg(not(target_os = "android"))]
+        { Ok(false) }
+    }
+
     // --- NEW: SAF file operations (Android only) ---
 
     /// List a directory under the persisted SAF root. `path` is a relative path from the root.

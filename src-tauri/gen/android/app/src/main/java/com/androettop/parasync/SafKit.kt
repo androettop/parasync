@@ -329,4 +329,114 @@ class SafKit(private val activity: Activity) {
         }
         return dir.delete()
     }
+
+    // ---------- NEW: COPY DIR SAF/<src> → app private dir ----------
+
+    /**
+     * Copia todo el árbol bajo SAF/<srcFolderRel> (o un archivo) hacia destAppDirAbs.
+     * Crea carpetas si faltan. Overwrite controla si reemplaza archivos existentes.
+     */
+    fun copyDirFromSongsToApp(srcFolderRel: String, destAppDirAbs: String, overwrite: Boolean): Boolean {
+        Log.d("SafKit", "copyDirFromSongsToApp(): src='$srcFolderRel' dest='$destAppDirAbs' overwrite=$overwrite")
+        val src = resolve(srcFolderRel) ?: run {
+            Log.w("SafKit", "copyDirFromSongsToApp(): source not found: '$srcFolderRel'")
+            return false
+        }
+
+        val dest = File(destAppDirAbs)
+        return if (src.isDirectory) {
+            // For directories, ensure destination is a directory and copy the tree under it
+            if (dest.exists()) {
+                if (!dest.isDirectory) {
+                    Log.w("SafKit", "copyDirFromSongsToApp(): dest exists and is not a directory: ${dest.absolutePath}")
+                    return false
+                }
+            } else {
+                if (!dest.mkdirs()) {
+                    Log.w("SafKit", "copyDirFromSongsToApp(): cannot create dest dir: ${dest.absolutePath}")
+                    return false
+                }
+            }
+            copyDocumentTreeToDir(src, dest, "", overwrite)
+        } else {
+            // Single file: if dest is a directory or looks like one, copy inside using source name; otherwise copy to exact file path
+            val targetFile = if (dest.isDirectory || destAppDirAbs.endsWith("/")) {
+                File(dest, src.name ?: "unnamed")
+            } else {
+                dest
+            }
+            copyOneDocFile(src, targetFile, overwrite)
+        }
+    }
+
+    private fun copyDocumentTreeToDir(srcDir: DocumentFile, destRoot: File, relBase: String, overwrite: Boolean): Boolean {
+        // ensure current dest directory exists
+        val curDest = if (relBase.isEmpty()) destRoot else File(destRoot, relBase)
+        if (!curDest.exists() && !curDest.mkdirs()) {
+            Log.w("SafKit", "copyDocumentTreeToDir(): cannot create dir ${curDest.absolutePath}")
+            return false
+        }
+        srcDir.listFiles().forEach { child ->
+            val name = child.name ?: return@forEach
+            val childRel = if (relBase.isEmpty()) name else "$relBase/$name"
+            if (child.isDirectory) {
+                if (!copyDocumentTreeToDir(child, destRoot, childRel, overwrite)) return false
+            } else {
+                val target = File(destRoot, childRel)
+                if (!copyOneDocFile(child, target, overwrite)) return false
+            }
+        }
+        return true
+    }
+
+    private fun copyOneDocFile(srcDoc: DocumentFile, destFile: File, overwrite: Boolean): Boolean {
+        // ensure parent
+        destFile.parentFile?.let {
+            if (!it.exists() && !it.mkdirs()) {
+                Log.w("SafKit", "copyOneDocFile(): cannot create parent ${it.absolutePath}")
+                return false
+            }
+        }
+
+        var outFile = destFile
+        if (outFile.exists()) {
+            if (!overwrite) {
+                // rename pattern: name (i).ext
+                val fileName = outFile.name
+                val dot = fileName.lastIndexOf('.')
+                val stem = if (dot > 0) fileName.substring(0, dot) else fileName
+                val ext = if (dot > 0) fileName.substring(dot) else ""
+                var i = 1
+                var candidate: File
+                do {
+                    candidate = File(outFile.parentFile, "$stem ($i)$ext")
+                    if (!candidate.exists()) break
+                    i++
+                } while (true)
+                outFile = candidate
+            } else {
+                // overwrite -> delete existing
+                if (!outFile.delete()) {
+                    Log.w("SafKit", "copyOneDocFile(): cannot delete existing ${outFile.absolutePath}")
+                    return false
+                }
+            }
+        }
+
+        activity.contentResolver.openInputStream(srcDoc.uri)?.use { ins ->
+            FileOutputStream(outFile).use { fos ->
+                val buf = ByteArray(DEFAULT_BUFFER_SIZE)
+                while (true) {
+                    val r = ins.read(buf)
+                    if (r <= 0) break
+                    fos.write(buf, 0, r)
+                }
+                fos.flush()
+            }
+            Log.d("SafKit", "copyOneDocFile(): wrote ${outFile.absolutePath}")
+            return true
+        }
+        Log.w("SafKit", "copyOneDocFile(): openInputStream null for uri=${srcDoc.uri}")
+        return false
+    }
 }

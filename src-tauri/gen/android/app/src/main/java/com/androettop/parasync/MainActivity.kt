@@ -69,4 +69,12 @@ class MainActivity : TauriActivity() {
         Log.d("SafKit", "MainActivity.safRemove -> ${'$'}ok")
         return ok
     }
+
+    // Copy from SAF tree to app private dir
+    fun copyDirFromSongsToApp(srcFolderRel: String, destAppDirAbs: String, overwrite: Boolean): Boolean {
+        Log.d("SafKit", "MainActivity.copyDirFromSongsToApp(src='${'$'}srcFolderRel', dest='${'$'}destAppDirAbs', overwrite=${'$'}overwrite)")
+        val ok = safKit.copyDirFromSongsToApp(srcFolderRel, destAppDirAbs, overwrite)
+        Log.d("SafKit", "MainActivity.copyDirFromSongsToApp -> ${'$'}ok")
+        return ok
+    }
 }

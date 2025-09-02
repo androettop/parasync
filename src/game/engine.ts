@@ -90,11 +90,11 @@ class Game extends Engine {
 
   private createAudioManager(): SongAudioManager {
     const songAudioManager = new SongAudioManager(
-      this.song.audioFileData.songTracks.map(
-        (trackName) => `${this.songDirPath}/${trackName}`,
+      this.song.audioFileData.songTracks.map((trackName) =>
+        `${this.songDirPath}/${trackName}`.replace(/\/\//g, "/"),
       ),
-      this.song.audioFileData.drumTracks.map(
-        (trackName) => `${this.songDirPath}/${trackName}`,
+      this.song.audioFileData.drumTracks.map((trackName) =>
+        `${this.songDirPath}/${trackName}`.replace(/\/\//g, "/"),
       ),
       this.song.recordingMetadata.length,
     );
@@ -139,10 +139,10 @@ class Game extends Engine {
     }, 500);
   }
 
-  private releaseResources() {
+  async releaseResources() {
     releaseFileUrl(this.cover?.data.src);
     releaseFileUrl(this.coverBg?.data.src);
-    this.songAudioManager?.dispose();
+    await this.songAudioManager?.dispose();
   }
 }
 
