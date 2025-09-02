@@ -183,7 +183,18 @@ const MySongsPage = () => {
             </Paper>
           ) : (
             <Grid container spacing={2}>
-              {songs?.length ? (
+              {loading ? (
+                <Grid size={12}>
+                  <Paper sx={{ p: 4, textAlign: "center" }}>
+                    <Typography variant="h6" gutterBottom>
+                      Loading Songs...
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Please wait while your songs are being loaded.
+                    </Typography>
+                  </Paper>
+                </Grid>
+              ) : songs?.length ? (
                 songs.map((localSong) => (
                   <Grid key={localSong.baseFileName} size={CARD_SIZE}>
                     {localSong.song ? (
