@@ -93,45 +93,45 @@ export const processNotesAndInstruments = (
   return { notes, instruments };
 };
 
-export const createNoteActor = (note: ProcessedNote) => {
+export const createNoteActor = (note: ProcessedNote, batchNumber: number) => {
   let noteActor: BaseNote | null = null;
 
   switch (note.class) {
     case "BP_HiHat_C":
-      noteActor = new BaseNote(note, Resources.NoteCircleCyan);
+      noteActor = new BaseNote(note, Resources.NoteCircleCyan, batchNumber);
       break;
     case "BP_Crash15_C":
-      noteActor = new BaseNote(note, Resources.NoteCirclePurple);
+      noteActor = new BaseNote(note, Resources.NoteCirclePurple, batchNumber);
       break;
     case "BP_Snare_C":
-      noteActor = new BaseNote(note, Resources.NoteRectRed);
+      noteActor = new BaseNote(note, Resources.NoteRectRed, batchNumber);
       break;
     case "BP_Tom1_C":
-      noteActor = new BaseNote(note, Resources.NoteRectCyan);
+      noteActor = new BaseNote(note, Resources.NoteRectCyan, batchNumber);
       break;
     case "BP_Tom2_C":
-      noteActor = new BaseNote(note, Resources.NoteRectGreen);
+      noteActor = new BaseNote(note, Resources.NoteRectGreen, batchNumber);
       break;
     case "BP_FloorTom_C":
-      noteActor = new BaseNote(note, Resources.NoteRectPurple);
+      noteActor = new BaseNote(note, Resources.NoteRectPurple, batchNumber);
       break;
     case "BP_Crash17_C":
-      noteActor = new BaseNote(note, Resources.NoteCircleOrange);
+      noteActor = new BaseNote(note, Resources.NoteCircleOrange, batchNumber);
       break;
     case "BP_Ride17_C":
-      noteActor = new BaseNote(note, Resources.NoteCircleYellow);
+      noteActor = new BaseNote(note, Resources.NoteCircleYellow, batchNumber);
       break;
     case "BP_Kick_C":
-      noteActor = new BaseNote(note, Resources.NoteKick, 8);
+      noteActor = new BaseNote(note, Resources.NoteKick, batchNumber, 8);
       break;
     case "bpm":
-      noteActor = new BaseNote(note, Resources.NoteBpm, 4);
+      noteActor = new BaseNote(note, Resources.NoteBpm, batchNumber, 4);
       break;
     case "bpmi":
-      noteActor = new BaseNote(note, Resources.NoteBpmI, 4);
+      noteActor = new BaseNote(note, Resources.NoteBpmI, batchNumber, 4);
       break;
     default:
-      noteActor = new BaseNote(note, Resources.NoteRectBase);
+      noteActor = new BaseNote(note, Resources.NoteRectBase, batchNumber);
       break;
   }
 

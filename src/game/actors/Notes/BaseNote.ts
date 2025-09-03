@@ -6,15 +6,22 @@ import { ProcessedNote } from "../../helpers/songProcess";
 class BaseNote extends Actor {
   sprite: Sprite;
   noteTime: number;
+  batchNumber: number;
 
-  constructor(note: ProcessedNote, imageSource: ImageSource, z: number = 10) {
+  constructor(
+    note: ProcessedNote,
+    imageSource: ImageSource,
+    batchNumber: number,
+    z: number = 10,
+  ) {
     super({
-      pos: vec(note.posX, -1000),
+      pos: vec(note.posX, 0),
       anchor: Vector.Half,
       z,
       opacity: 1,
     });
     this.noteTime = note.time;
+    this.batchNumber = batchNumber;
     this.sprite = Sprite.from(imageSource);
   }
 
@@ -38,28 +45,22 @@ class BaseNote extends Actor {
       GAME_CONFIG.highwayHeight -
       GAME_CONFIG.dividerPosition +
       distanceToDivider;
-    this.pos.y = posY;
-
-    if (this.pos.y > GAME_CONFIG.highwayHeight) {
-      this.kill();
-    }
 
     let opacity = 0;
     if (
-      this.pos.y >= GAME_CONFIG.dividerPosition &&
-      this.pos.y <= GAME_CONFIG.highwayHeight - GAME_CONFIG.dividerPosition
+      posY >= GAME_CONFIG.dividerPosition &&
+      posY <= GAME_CONFIG.highwayHeight - GAME_CONFIG.dividerPosition
     ) {
       opacity = 0.98;
-    } else if (this.pos.y > 0 && this.pos.y < GAME_CONFIG.dividerPosition) {
-      opacity = this.pos.y / GAME_CONFIG.dividerPosition;
+    } else if (posY > 0 && posY < GAME_CONFIG.dividerPosition) {
+      opacity = posY / GAME_CONFIG.dividerPosition;
     } else if (
-      this.pos.y > GAME_CONFIG.highwayHeight - GAME_CONFIG.dividerPosition &&
-      this.pos.y < GAME_CONFIG.highwayHeight
+      posY > GAME_CONFIG.highwayHeight - GAME_CONFIG.dividerPosition &&
+      posY < GAME_CONFIG.highwayHeight
     ) {
       opacity =
         1 -
-        (this.pos.y -
-          (GAME_CONFIG.highwayHeight - GAME_CONFIG.dividerPosition)) /
+        (posY - (GAME_CONFIG.highwayHeight - GAME_CONFIG.dividerPosition)) /
           GAME_CONFIG.dividerPosition;
     }
 
@@ -68,6 +69,11 @@ class BaseNote extends Actor {
 
   public onInitialize() {
     this.graphics.use(this.sprite);
+    // set position relative to the batch.
+    const batchInitTime = GAME_CONFIG.notesBatchSize * this.batchNumber;
+    const posY =
+      (batchInitTime - this.noteTime) * GAME_CONFIG.notesSpeed * 1000;
+    this.pos.y = posY;
   }
 }
 

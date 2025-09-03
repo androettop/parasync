@@ -1,13 +1,10 @@
 import { Actor, Sprite, vec, Vector } from "excalibur";
 import { GAME_CONFIG } from "../config";
 import Game from "../engine";
-import {
-  createNoteActor,
-  getBatchNumber,
-  ProcessedNote,
-} from "../helpers/songProcess";
+import { getBatchNumber, ProcessedNote } from "../helpers/songProcess";
 import { Resources } from "../resources";
 import Divider from "./Divider";
+import NotesBatch from "./NotesBatch";
 
 class Highway extends Actor {
   notes: Record<number, ProcessedNote[]> = {};
@@ -49,11 +46,8 @@ class Highway extends Actor {
 
       // Load current batch
       const currentNotes = this.notes[batchNumber];
-      if (currentNotes) {
-        currentNotes.forEach((note) => {
-          this.addChild(createNoteActor(note));
-        });
-      }
+      const notesBatchActor = new NotesBatch(currentNotes || [], batchNumber);
+      this.addChild(notesBatchActor);
     }
   }
 
