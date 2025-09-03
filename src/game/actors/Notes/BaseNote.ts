@@ -51,7 +51,7 @@ class BaseNote extends Actor {
       posY >= GAME_CONFIG.dividerPosition &&
       posY <= GAME_CONFIG.highwayHeight - GAME_CONFIG.dividerPosition
     ) {
-      opacity = 0.98;
+      opacity = 1;
     } else if (posY > 0 && posY < GAME_CONFIG.dividerPosition) {
       opacity = posY / GAME_CONFIG.dividerPosition;
     } else if (
