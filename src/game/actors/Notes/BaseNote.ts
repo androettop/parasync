@@ -28,13 +28,11 @@ class BaseNote extends Actor {
   public onPostUpdate(engine: Game, elapsed: number): void {
     super.onPostUpdate(engine, elapsed);
 
-    const audioDelay = Number(localStorage.getItem("audio-delay") || 0);
-
     const notesDelay =
       (GAME_CONFIG.highwayHeight - GAME_CONFIG.dividerPosition) /
         GAME_CONFIG.notesSpeed /
         1000 +
-      audioDelay / 1000; // px/s
+      engine.audioDelay / 1000; // px/s
 
     const currentTime = (engine.getPlaybackPosition() || 0) + notesDelay;
 

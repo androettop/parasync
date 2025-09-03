@@ -21,6 +21,7 @@ class Game extends Engine {
   coverBg: ImageSource | null = null;
   exitHandler: () => void;
   releaseFilesTimeout: number = 0;
+  audioDelay: number = 0;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -40,6 +41,14 @@ class Game extends Engine {
     this.song = song;
     this.songDirPath = songDirPath;
     this.exitHandler = onExit;
+
+    this.updateAudioDelay();
+    // local storage listener to update audio-delay:
+    window.addEventListener("storage", (event) => {
+      if (event.key === "audio-delay") {
+        this.updateAudioDelay();
+      }
+    });
   }
 
   public songPlay() {
@@ -78,6 +87,10 @@ class Game extends Engine {
 
   public getPlaybackPosition() {
     return this.songAudioManager?.position || 0;
+  }
+
+  private updateAudioDelay() {
+    this.audioDelay = Number(localStorage.getItem("audio-delay") || 0);
   }
 
   public getDuration() {
