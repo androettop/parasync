@@ -194,12 +194,15 @@ export const getLocalSongs = async (
     : await readDir(songsFolder);
 
   const songs: LocalSong[] = [];
-  for (const entry of entries) {
-    if (entry.isDirectory && entry.name !== ".tmp") {
-      const localSong = await loadSong(songsFolder, entry.name);
-      if (localSong) {
-        songs.push(localSong);
-      }
+  const songPromises = entries
+    .filter((entry) => entry.isDirectory && entry.name !== ".tmp")
+    .map((entry) => loadSong(songsFolder, entry.name));
+
+  const localSongs = await Promise.all(songPromises);
+
+  for (const localSong of localSongs) {
+    if (localSong) {
+      songs.push(localSong);
     }
   }
   return songs;
