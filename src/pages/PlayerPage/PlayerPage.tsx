@@ -6,8 +6,11 @@ import { loadFile } from "../../game/helpers/filesLoader";
 import useSongsPath from "../../hooks/useSongsPath";
 import { ParadiddleSong } from "../../types/songs";
 import { getParadiddleSong } from "../../utils/fs";
+import { useKeepAwake } from "../../hooks/useKeepAwake";
 
 const PlayerPage = () => {
+  useKeepAwake();
+
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const file = searchParams.get("file");
