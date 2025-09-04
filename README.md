@@ -17,9 +17,9 @@ The Android version is now available in the [Google Play Store](https://play.goo
 
 - ⚡ Drum-focused _Guitar Hero_-like player.
 - 🎵 Supports Paradiddle song files.
-- 📂 Built-in tool for downloading and managing song libraries.
+- 📂 Built-in tool for downloading and managing your Paradiddle songs library.
 - 🌐 Allows configuration of remote song libraries to browse and fetch new content, you can see an example [here](https://gist.github.com/androettop/765e909d37c2b562245d2458713c6223).
-- 🖥️ Available for Windows, macOS, Linux, and Android, iOS & Meta Quest versions will be available soon.
+- 🖥️ Available for Windows, macOS, Linux, Android and Meta Quest, iOS version will be available soon.
 
 ## 📢 Disclaimer
 
