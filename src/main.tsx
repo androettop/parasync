@@ -7,6 +7,7 @@ import Layout from "./pages/Layout/Layout.tsx";
 import { ThemeProvider } from "@emotion/react";
 import { colors, createTheme, CssBaseline } from "@mui/material";
 import { routes } from "./utils/routes.ts";
+import { SongsProvider } from "./context/SongsContext";
 
 const router = createBrowserRouter([
   {
@@ -40,7 +41,9 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <CssBaseline />
     <ThemeProvider theme={theme}>
-      <RouterProvider router={router} />
+      <SongsProvider>
+        <RouterProvider router={router} />
+      </SongsProvider>
     </ThemeProvider>
   </StrictMode>,
 );

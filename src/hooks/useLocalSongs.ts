@@ -1,40 +1,7 @@
-import { useEffect, useState } from "react";
-import { LocalSong } from "../types/songs";
-import useSongsPath from "./useSongsPath";
-import useStaticHandler from "../components/hooks/useStaticHandler";
-import { getLocalSongs } from "../utils/fs";
-import { releaseFileUrl } from "../game/helpers/filesLoader";
+import { useSongsContext } from "../context/SongsContext";
 
 const useLocalSongs = () => {
-  const [loading, setLoading] = useState(false);
-  const [songs, setSongs] = useState<LocalSong[] | null>(null);
-  const [songsPath] = useSongsPath();
-
-  const handleLoadSongs = useStaticHandler(async (songsPath) => {
-    setLoading(true);
-    if (songsPath) {
-      const songs = await getLocalSongs(songsPath);
-      setSongs(songs);
-    }
-    setLoading(false);
-  });
-
-  const revokeCovers = useStaticHandler(() => {
-    songs?.forEach((localSong) => releaseFileUrl(localSong.song?.coverUrl));
-  });
-
-  useEffect(() => {
-    handleLoadSongs(songsPath);
-
-    return () => {
-      revokeCovers();
-    };
-  }, [handleLoadSongs, songsPath]);
-
-  const refresh = () => {
-    handleLoadSongs(songsPath);
-  };
-
+  const { songs, loading, refresh } = useSongsContext();
   return { songs, refresh, loading };
 };
 
