@@ -218,11 +218,9 @@ export const getLocalSongs = async (
       // Check if we already have this song loaded
       const existingSong = existingSongsMap.get(entry.name);
       if (existingSong) {
-        console.log(`Reusing existing song for ${entry.name}`);
         return existingSong;
       }
       // If not, load it from disk
-      console.log(`Loading song from disk for ${entry.name}`);
       return loadSong(songsFolder, entry.name);
     });
 

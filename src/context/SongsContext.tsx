@@ -65,12 +65,6 @@ export const SongsProvider = ({ children }: { children: ReactNode }) => {
 
   const handleLoadSongs = useStaticHandler(
     async (songsPath: string | null, existingSongs?: LocalSong[] | null) => {
-      console.log(
-        "Loading songs from",
-        songsPath,
-        "with existingSongs:",
-        existingSongs,
-      );
       setLoading(true);
       if (songsPath) {
         const loaded = await getLocalSongs(songsPath, existingSongs);
