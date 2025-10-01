@@ -32,7 +32,7 @@ import { SongRepository } from "../../utils/api";
 import { CARD_SIZE, PAGE_SIZE } from "../../utils/songs";
 import { getSongFolderPrefix } from "../../utils/fs";
 import useSongsPath from "../../hooks/useSongsPath";
-import useLocalSongs from "../../hooks/useLocalSongs";
+import { useLocalSongs } from "../../context/SongsContext";
 import { DownloadManager } from "../../utils/downloads";
 
 const SongsPage = () => {

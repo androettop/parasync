@@ -87,10 +87,9 @@ export const SongsProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-export const useSongsContext = () => {
+export const useLocalSongs = () => {
   const ctx = useContext(SongsContext);
-  if (!ctx)
-    throw new Error("useSongsContext must be used within SongsProvider");
+  if (!ctx) throw new Error("useLocalSongs must be used within SongsProvider");
   return ctx;
 };
 

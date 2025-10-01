@@ -9,10 +9,10 @@ import {
   Toolbar,
   Typography,
 } from "@mui/material";
-import React from "react";
+import { useState } from "react";
 import { Link as RRLink, useNavigate } from "react-router";
 import SongCard from "../../components/SongCard/SongCard";
-import useLocalSongs from "../../hooks/useLocalSongs";
+import { useLocalSongs } from "../../context/SongsContext";
 import useSongsPath from "../../hooks/useSongsPath";
 import { Difficulty, LocalSong } from "../../types/songs";
 import { deleteSong, selectSongsDirectory } from "../../utils/fs";
@@ -23,8 +23,8 @@ import { CARD_SIZE } from "../../utils/songs";
 const MySongsPage = () => {
   const [songsPath, setSongsPath] = useSongsPath();
   const { songs, loading, refresh } = useLocalSongs();
-  const [selectMode, setSelectMode] = React.useState(false);
-  const [selectedSongs, setSelectedSongs] = React.useState<string[]>([]);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedSongs, setSelectedSongs] = useState<string[]>([]);
 
   const navigate = useNavigate();
 
