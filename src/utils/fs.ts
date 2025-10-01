@@ -22,17 +22,20 @@ export const selectSongsDirectory = async () => {
 };
 
 export const getImageUrl = async (imagePath: string): Promise<string> => {
-  const image = IS_ANDROID
-    ? await SafManager.getInstance().readFile(imagePath)
-    : await readFile(imagePath);
-  // Ensure we pass an ArrayBuffer slice, not a typed array view, to satisfy TS types
-  const buf = (image as Uint8Array).buffer.slice(
-    (image as Uint8Array).byteOffset,
-    (image as Uint8Array).byteOffset + (image as Uint8Array).byteLength,
-  ) as ArrayBuffer;
-  const blob = new Blob([buf], { type: "image/png" });
-  const url = URL.createObjectURL(blob);
-  return url;
+  try {
+    const image = IS_ANDROID
+      ? await SafManager.getInstance().readFile(imagePath)
+      : await readFile(imagePath);
+    const buf = (image as Uint8Array).buffer.slice(
+      (image as Uint8Array).byteOffset,
+      (image as Uint8Array).byteOffset + (image as Uint8Array).byteLength,
+    ) as ArrayBuffer;
+    const blob = new Blob([buf], { type: "image/png" });
+    const url = URL.createObjectURL(blob);
+    return url;
+  } catch (error) {
+    return "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+9p9sAAAAASUVORK5CYII=";
+  }
 };
 
 export const getParadiddleSong = async (
