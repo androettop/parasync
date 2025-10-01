@@ -40,8 +40,25 @@ export const SongsProvider = ({ children }: { children: ReactNode }) => {
             )(prev)
           : valueOrUpdater;
 
-      // Revoke previous covers to avoid leaking object URLs
-      prev?.forEach((localSong) => releaseFileUrl(localSong.song?.coverUrl));
+      // Early return if no previous songs to clean up
+      if (!prev?.length) return next;
+
+      // If clearing all songs, revoke all URLs
+      if (!next?.length) {
+        prev.forEach((song) => releaseFileUrl(song.song?.coverUrl));
+        return next;
+      }
+
+      // Create Set only if both prev and next have songs
+      const nextBaseFileNames = new Set(next.map((song) => song.baseFileName));
+
+      // Only process songs that have coverUrl to avoid unnecessary iterations
+      prev.forEach((song) => {
+        if (song.song?.coverUrl && !nextBaseFileNames.has(song.baseFileName)) {
+          releaseFileUrl(song.song.coverUrl);
+        }
+      });
+
       return next;
     });
   };
