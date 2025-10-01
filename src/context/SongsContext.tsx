@@ -19,7 +19,8 @@ type SongsContextType = {
   setLoading: Dispatch<React.SetStateAction<boolean>>;
   lastLoadedPath: string | null;
   setLastLoadedPath: Dispatch<React.SetStateAction<string | null>>;
-  refresh: () => void;
+  refresh: (existingSongs?: LocalSong[] | null) => void;
+  removeSongs: (baseFileNames: string[]) => void;
 };
 
 const SongsContext = createContext<SongsContextType | undefined>(undefined);
@@ -45,18 +46,33 @@ export const SongsProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const handleLoadSongs = useStaticHandler(async (songsPath: string | null) => {
-    setLoading(true);
-    if (songsPath) {
-      const loaded = await getLocalSongs(songsPath);
-      setSongs(loaded);
-      setLastLoadedPath(songsPath);
-    }
-    setLoading(false);
-  });
+  const handleLoadSongs = useStaticHandler(
+    async (songsPath: string | null, existingSongs?: LocalSong[] | null) => {
+      console.log(
+        "Loading songs from",
+        songsPath,
+        "with existingSongs:",
+        existingSongs,
+      );
+      setLoading(true);
+      if (songsPath) {
+        const loaded = await getLocalSongs(songsPath, existingSongs);
+        setSongs(loaded);
+        setLastLoadedPath(songsPath);
+      }
+      setLoading(false);
+    },
+  );
 
-  const refresh = () => {
-    handleLoadSongs(songsPath);
+  const refresh = (existingSongs?: LocalSong[] | null) => {
+    handleLoadSongs(songsPath, existingSongs);
+  };
+
+  const removeSongs = (baseFileNames: string[]) => {
+    setSongs((prev) => {
+      if (!prev) return prev;
+      return prev.filter((song) => !baseFileNames.includes(song.baseFileName));
+    });
   };
 
   useEffect(() => {
@@ -68,7 +84,7 @@ export const SongsProvider = ({ children }: { children: ReactNode }) => {
     ) {
       handleLoadSongs(songsPath);
     }
-  }, [songsPath, lastLoadedPath, songs, handleLoadSongs]);
+  }, [songsPath, lastLoadedPath, handleLoadSongs]);
 
   return (
     <SongsContext.Provider
@@ -80,6 +96,7 @@ export const SongsProvider = ({ children }: { children: ReactNode }) => {
         lastLoadedPath,
         setLastLoadedPath,
         refresh,
+        removeSongs,
       }}
     >
       {children}

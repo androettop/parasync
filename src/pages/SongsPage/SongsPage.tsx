@@ -166,7 +166,7 @@ const SongsPage = () => {
       await downloadManagerRef.current.startAndWait(prefix, song, songsPath);
     } finally {
       setSongsDownloadStates((prev) => ({ ...prev, [song.id]: "downloaded" }));
-      refreshLocalSongs();
+      refreshLocalSongs(localSongs);
     }
   };
 

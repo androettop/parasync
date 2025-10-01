@@ -188,15 +188,40 @@ export const loadSong = async (
 
 export const getLocalSongs = async (
   songsFolder: string,
+  existingSongs?: LocalSong[] | null,
 ): Promise<LocalSong[]> => {
   const entries = IS_ANDROID
     ? await SafManager.getInstance().readDir(songsFolder)
     : await readDir(songsFolder);
 
   const songs: LocalSong[] = [];
+
+  // Create a map of existing songs by baseFileName for quick lookup
+  const existingSongsMap = new Map<string, LocalSong>();
+  if (existingSongs) {
+    existingSongs.forEach((song) => {
+      // Extract just the folder part of the baseFileName for comparison
+      const folderName = song.baseFileName.substring(
+        0,
+        song.baseFileName.lastIndexOf("/"),
+      );
+      existingSongsMap.set(folderName, song);
+    });
+  }
+
   const songPromises = entries
     .filter((entry) => entry.isDirectory && entry.name !== ".tmp")
-    .map((entry) => loadSong(songsFolder, entry.name));
+    .map(async (entry) => {
+      // Check if we already have this song loaded
+      const existingSong = existingSongsMap.get(entry.name);
+      if (existingSong) {
+        console.log(`Reusing existing song for ${entry.name}`);
+        return existingSong;
+      }
+      // If not, load it from disk
+      console.log(`Loading song from disk for ${entry.name}`);
+      return loadSong(songsFolder, entry.name);
+    });
 
   const localSongs = await Promise.all(songPromises);
 

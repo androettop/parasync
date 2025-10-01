@@ -22,7 +22,7 @@ import { CARD_SIZE } from "../../utils/songs";
 
 const MySongsPage = () => {
   const [songsPath, setSongsPath] = useSongsPath();
-  const { songs, loading, refresh } = useLocalSongs();
+  const { songs, loading, refresh, removeSongs } = useLocalSongs();
   const [selectMode, setSelectMode] = useState(false);
   const [selectedSongs, setSelectedSongs] = useState<string[]>([]);
 
@@ -58,7 +58,7 @@ const MySongsPage = () => {
     );
   };
 
-  const handleDeleteSelected = () => {
+  const handleDeleteSelected = async () => {
     const deletePromises = selectedSongs.map(async (baseFileName) => {
       const songFolder =
         songsPath +
@@ -67,11 +67,15 @@ const MySongsPage = () => {
       return deleteSong(songFolder);
     });
 
-    Promise.all(deletePromises).catch((error) => {
+    try {
+      await Promise.all(deletePromises);
+      // Remove songs from the list without reloading from disk
+      removeSongs(selectedSongs);
+    } catch (error) {
       console.error("Error deleting selected songs:", error);
-    });
-
-    refresh();
+      // If there was an error, refresh to sync with disk state
+      refresh();
+    }
 
     setSelectedSongs([]);
     setSelectMode(false);
