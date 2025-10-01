@@ -28,8 +28,8 @@ import { useState } from "react";
 import { Outlet, To, useNavigate } from "react-router";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
 import useSongsPath from "../../hooks/useSongsPath";
-import { notFoundRoute, routes } from "../../utils/routes";
 import { bottomSpacing, topSpacing } from "../../utils/mobile";
+import { notFoundRoute, routes } from "../../utils/routes";
 
 const drawerWidth = 280;
 const defaultDelay = -1700;
@@ -45,7 +45,6 @@ const Layout = () => {
   );
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [isClosing, setIsClosing] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const currentRoute =
     routes.find((route) => route.path === location.pathname) || notFoundRoute;
@@ -63,18 +62,11 @@ const Layout = () => {
   };
 
   const handleDrawerClose = () => {
-    setIsClosing(true);
     setIsDrawerOpen(false);
   };
 
-  const handleDrawerTransitionEnd = () => {
-    setIsClosing(false);
-  };
-
   const handleDrawerToggle = () => {
-    if (!isClosing) {
-      setIsDrawerOpen(!isDrawerOpen);
-    }
+    setIsDrawerOpen(!isDrawerOpen);
   };
 
   const handleMenuClose = () => {
@@ -229,7 +221,6 @@ const Layout = () => {
           <Drawer
             variant={isMobile ? "temporary" : "permanent"}
             open={isMobile ? isDrawerOpen : true}
-            onTransitionEnd={handleDrawerTransitionEnd}
             onClose={handleDrawerClose}
             elevation={0}
             ModalProps={{
