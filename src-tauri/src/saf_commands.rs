@@ -37,21 +37,37 @@ pub async fn saf_copy_saf_to_appdir(
 }
 
 #[tauri::command]
-pub fn saf_read_dir(path: String) -> Result<String, String> {
-    SAF.read_dir(path)
+pub async fn saf_read_dir(path: String) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        SAF.read_dir(path)
+    })
+    .await
+    .map_err(|e| format!("Join error: {e}"))?
 }
 
 #[tauri::command]
-pub fn saf_read_text_file(path: String) -> Result<String, String> {
-    SAF.read_text_file(path)
+pub async fn saf_read_text_file(path: String) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        SAF.read_text_file(path)
+    })
+    .await
+    .map_err(|e| format!("Join error: {e}"))?
 }
 
 #[tauri::command]
-pub fn saf_read_file(path: String) -> Result<Vec<u8>, String> {
-    SAF.read_file(path)
+pub async fn saf_read_file(path: String) -> Result<Vec<u8>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        SAF.read_file(path)
+    })
+    .await
+    .map_err(|e| format!("Join error: {e}"))?
 }
 
 #[tauri::command]
-pub fn saf_remove(path: String, recursive: bool) -> Result<bool, String> {
-    SAF.remove(path, recursive)
+pub async fn saf_remove(path: String, recursive: bool) -> Result<bool, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        SAF.remove(path, recursive)
+    })
+    .await
+    .map_err(|e| format!("Join error: {e}"))?
 }
