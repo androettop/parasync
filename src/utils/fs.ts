@@ -13,6 +13,8 @@ import * as path from "@tauri-apps/api/path";
 import { IS_ANDROID } from "./mobile";
 import { SafManager } from "./saf";
 
+const PARASYNC_MANIFEST = "parasync.json";
+
 export const selectSongsDirectory = async () => {
   const file = await open({
     multiple: false,
@@ -138,14 +140,46 @@ export const loadSong = async (
   const difficulties: Difficulty[] = [];
   let song: Song | null = null;
   let baseFileName = "";
+  let manifestId: string | null = null;
 
   for (const entry of songDir) {
     if (entry.isFile) {
-      const lastUnderscoreIndex = entry.name.lastIndexOf("_");
-      // if the song data is not loaded and it is a rlrr file readit
-      if (!song && entry.name.endsWith(".rlrr")) {
+      if (entry.name === PARASYNC_MANIFEST) {
         try {
-          baseFileName = entry.name.substring(0, lastUnderscoreIndex);
+          const manifestPath = `${songPath}/${entry.name}`;
+          const manifestRaw = (
+            IS_ANDROID
+              ? await SafManager.getInstance().readTextFile(manifestPath)
+              : await readTextFile(manifestPath)
+          ).trim();
+          const manifest = JSON.parse(manifestRaw);
+          if (manifest && typeof manifest.id === "string") {
+            manifestId = manifest.id;
+          }
+        } catch (error) {
+          console.error(
+            `Error reading manifest for song folder ${songDirPath}:`,
+            error,
+          );
+        }
+        continue;
+      }
+
+      if (!entry.name.endsWith(".rlrr")) {
+        continue;
+      }
+
+      const baseName = entry.name.substring(0, entry.name.length - 5);
+      const lastUnderscoreIndex = baseName.lastIndexOf("_");
+      const resolvedBaseFileName =
+        lastUnderscoreIndex > -1
+          ? baseName.substring(0, lastUnderscoreIndex)
+          : baseName;
+
+      // if the song data is not loaded and it is a rlrr file read it
+      if (!song) {
+        try {
+          baseFileName = resolvedBaseFileName;
           const paradiddleSong: ParadiddleSong = await getParadiddleSong(
             `${songPath}/${entry.name}`,
           );
@@ -167,19 +201,20 @@ export const loadSong = async (
           );
         }
       }
-      if (entry.name.endsWith(".rlrr")) {
-        const difficulty =
-          entry.name.substring(
-            lastUnderscoreIndex + 1,
-            entry.name.length - 5,
-          ) || "Easy";
-        difficulties.push(difficulty as Difficulty);
-      }
+
+      const difficulty =
+        lastUnderscoreIndex > -1
+          ? baseName.substring(lastUnderscoreIndex + 1)
+          : "Easy";
+      difficulties.push(difficulty as Difficulty);
     }
   }
 
   if (song) {
     song.difficulties = difficulties;
+    if (manifestId) {
+      song.id = manifestId;
+    }
     return {
       baseFileName: `${songDirPath}/${baseFileName}`,
       song,
@@ -232,13 +267,6 @@ export const getLocalSongs = async (
     }
   }
   return songs;
-};
-
-export const getSongFolderPrefix = (
-  songId: string,
-  repoName: string,
-): string => {
-  return `${repoName}-${songId}-`;
 };
 
 export const getAndroidTmpFolder = async (

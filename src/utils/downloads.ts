@@ -20,7 +20,7 @@ export const formatBytes = (bytes: number, decimals = 2): string => {
 
 // Type definition matching what the backend returns
 type DownloadStatus = {
-  key: string; // == folderPrefix
+  key: string; // == song id
   bytes_downloaded: number;
   total_bytes?: number | null; // can be undefined if server doesn't send Content-Length
   progress: number; // 0..1 (download). Goes to 1.0 when download finishes

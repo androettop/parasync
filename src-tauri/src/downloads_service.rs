@@ -1,6 +1,7 @@
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use serde::Serialize;
+use serde_json::{json, Value};
 use std::{collections::HashMap, fs, io, path::Path, sync::Arc};
 use tauri::async_runtime::{spawn, spawn_blocking};
 use tokio::{io::AsyncWriteExt, sync::Semaphore};
@@ -11,7 +12,7 @@ pub static DOWNLOADS: Lazy<DownloadsService> = Lazy::new(DownloadsService::new);
 /// Structure that the frontend will consume to display status
 #[derive(Debug, Clone, Serialize)]
 pub struct DownloadStatus {
-    pub key: String,                 // == folder_prefix (e.g. "RepoA-1234")
+    pub key: String,                 // == song id
     pub bytes_downloaded: u64,
     pub total_bytes: Option<u64>,    // Content-Length if available
     pub progress: f32,               // 0..=1 (download); 1.0 when download finishes
@@ -71,6 +72,8 @@ struct TaskHandle {
     progress: ProgressArc,
 }
 
+const MANIFEST_FILE_NAME: &str = "parasync.json";
+
 /// Internal manager state
 struct ManagerInner {
     /// Active downloads by `key`
@@ -102,8 +105,8 @@ impl ManagerInner {
         if download_url.trim().is_empty() { return Err("empty download_url".into()); }
         if dest_root.trim().is_empty() { return Err("empty dest_root".into()); }
 
-        // 1) Reject if already downloaded: any directory in dest_root starting with "{key}-"
-        if has_existing_with_key_prefix(Path::new(&dest_root), &key)
+        // 1) Reject if already downloaded: look for a manifest that already tracks this song id
+        if has_existing_song_with_id(Path::new(&dest_root), &key)
             .map_err(|e| format!("Failed to scan destination: {e}"))? {
             return Err(format!("Song '{key}' is already downloaded in {}", dest_root));
         }
@@ -245,16 +248,14 @@ impl ManagerInner {
                 e
             })?;
 
-        // Final directory name = "key-original"
-        let final_name = format!("{}{}", key, original_root_dir);
-        let final_dir = Path::new(&dest_root).join(&final_name);
+        // Destination path keeps the original folder name from the archive
+        let final_dir = Path::new(&dest_root).join(&original_root_dir);
 
-        // Re-check "already downloaded" condition with the exact final path
         if final_dir.exists() {
             let _ = fs::remove_dir_all(&tmp_dir);
             self.remove_task(&key);
             drop(permit);
-            return Err(format!("Song '{}' is already downloaded at {}", key, final_dir.display()));
+            return Err(format!("Destination folder '{}' already exists", final_dir.display()));
         }
 
         // --- EXTRACTION ---
@@ -291,6 +292,15 @@ impl ManagerInner {
         let extracted_src = extract_root.join(&original_root_dir);
         match move_dir(&extracted_src, &final_dir) {
             Ok(()) => {
+                if let Err(e) = write_parasync_manifest(&final_dir, &key) {
+                    let _ = fs::remove_file(&tmp_zip);
+                    let _ = fs::remove_dir_all(&final_dir);
+                    let _ = fs::remove_dir_all(&tmp_dir);
+                    self.remove_task(&key);
+                    drop(permit);
+                    return Err(e);
+                }
+
                 // cleanup
                 let _ = fs::remove_file(&tmp_zip);
                 let _ = fs::remove_dir_all(&tmp_dir);
@@ -309,29 +319,71 @@ impl ManagerInner {
     }
 }
 
-/// Checks if there is any directory inside `dest_root` whose name starts with "{key}-".
-fn has_existing_with_key_prefix(dest_root: &Path, key: &str) -> io::Result<bool> {
-    let prefix = key.to_string();
+/// Checks if a manifest already exists for the requested song id.
+fn has_existing_song_with_id(dest_root: &Path, song_id: &str) -> io::Result<bool> {
     let rd = match fs::read_dir(dest_root) {
         Ok(rd) => rd,
         Err(e) => {
-            // If dest_root doesn't exist, treat as no match
             if e.kind() == io::ErrorKind::NotFound { return Ok(false); }
             return Err(e);
         }
     };
+
     for entry in rd {
-        if let Ok(ent) = entry {
-            let name = ent.file_name();
-            let name = name.to_string_lossy();
-            if name.starts_with(&prefix) {
-                if let Ok(md) = ent.metadata() {
-                    if md.is_dir() { return Ok(true); }
-                }
+        let entry = match entry {
+            Ok(entry) => entry,
+            Err(_) => continue,
+        };
+
+        if entry.file_name() == ".tmp" {
+            continue;
+        }
+
+        let file_type = match entry.file_type() {
+            Ok(ft) => ft,
+            Err(_) => continue,
+        };
+
+        if !file_type.is_dir() {
+            continue;
+        }
+
+        if let Ok(Some(existing_id)) = read_manifest_song_id(&entry.path()) {
+            if existing_id == song_id {
+                return Ok(true);
             }
         }
     }
+
     Ok(false)
+}
+
+fn read_manifest_song_id(dir: &Path) -> io::Result<Option<String>> {
+    let manifest_path = dir.join(MANIFEST_FILE_NAME);
+    let contents = match fs::read_to_string(&manifest_path) {
+        Ok(contents) => contents,
+        Err(e) => {
+            if e.kind() == io::ErrorKind::NotFound { return Ok(None); }
+            return Err(e);
+        }
+    };
+
+    match serde_json::from_str::<Value>(&contents) {
+        Ok(value) => Ok(value
+            .get("id")
+            .and_then(|v| v.as_str())
+            .map(|id| id.to_string())),
+        Err(_) => Ok(None),
+    }
+}
+
+fn write_parasync_manifest(dir: &Path, song_id: &str) -> Result<(), String> {
+    let manifest = json!({ "id": song_id });
+    let data = serde_json::to_vec_pretty(&manifest)
+        .map_err(|e| format!("Failed to serialize manifest: {e}"))?;
+    let manifest_path = dir.join(MANIFEST_FILE_NAME);
+    fs::write(&manifest_path, data)
+        .map_err(|e| format!("Failed to write manifest {}: {e}", manifest_path.display()))
 }
 
 /// Extracts a ZIP to `dest_root` (loose). Zip-slip protected.

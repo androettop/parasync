@@ -30,7 +30,6 @@ import {
 } from "../../types/songs";
 import { SongRepository } from "../../utils/api";
 import { CARD_SIZE, PAGE_SIZE } from "../../utils/songs";
-import { getSongFolderPrefix } from "../../utils/fs";
 import useSongsPath from "../../hooks/useSongsPath";
 import { useLocalSongs } from "../../context/SongsContext";
 import { DownloadManager } from "../../utils/downloads";
@@ -60,15 +59,9 @@ const SongsPage = () => {
     return onlineSongs.map((song) => {
       const data: { song: Song; localSong?: LocalSong } = {
         song,
-        localSong: localSongs?.find((localSong) => {
-          if (!repoRef.current) return false;
-          const prefix = getSongFolderPrefix(
-            song.id,
-            repoRef.current.config.name,
-          );
-          const isLocal = localSong.baseFileName.startsWith(prefix);
-          return isLocal;
-        }),
+        localSong: localSongs?.find(
+          (localSong) => localSong.song?.id && localSong.song.id === song.id,
+        ),
       };
       return data;
     });
@@ -162,8 +155,7 @@ const SongsPage = () => {
     if (!song.downloadUrl || !songsPath || !repoRef.current) return;
     setSongsDownloadStates((prev) => ({ ...prev, [song.id]: "downloading" }));
     try {
-      const prefix = getSongFolderPrefix(song.id, repoRef.current.config.name);
-      await downloadManagerRef.current.startAndWait(prefix, song, songsPath);
+      await downloadManagerRef.current.startAndWait(song.id, song, songsPath);
     } finally {
       setSongsDownloadStates((prev) => ({ ...prev, [song.id]: "downloaded" }));
       refreshLocalSongs(localSongs);
