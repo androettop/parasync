@@ -15,7 +15,6 @@ search_url: |
   '&sortDirection=' || sortDirection
 response:
   songs_array: ~response.maps
-  serializer: msgpackr
   fields:
     id: ~song.id
     uploadedAt: ~song.submissionDate
